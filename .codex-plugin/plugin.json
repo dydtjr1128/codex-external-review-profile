@@ -1,7 +1,7 @@
 {
   "name": "external-review-profiles",
   "version": "0.1.0",
-  "description": "External reviewer orchestration for Claude Bridge, Codex Gemini, and subagent reviews.",
+  "description": "External reviewer orchestration for Claude Bridge, Antigravity Bridge, Codex Gemini, and subagent reviews.",
   "author": {
     "name": "Local developer"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "External Review Profiles",
     "shortDescription": "Run and reconcile external reviews.",
-    "longDescription": "External Review Profiles adds Codex skills for orchestrating read-only external reviews across the Claude Bridge submodule/plugin, Codex Gemini, and subagents. Use them for ordinary second-pass reviews or adversarial challenge reviews, then verify findings locally before acting on them.",
+    "longDescription": "External Review Profiles adds Codex skills for orchestrating read-only external reviews across the Claude Bridge submodule/plugin, Antigravity Bridge submodule/plugin, Codex Gemini, and subagents. Use them for ordinary second-pass reviews or adversarial challenge reviews, then verify findings locally before acting on them.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [
@@ -17,7 +17,7 @@
     ],
     "defaultPrompt": [
       "Run an adversarial review of my local changes.",
-      "Run Claude Bridge, Gemini, and subagent reviews of my local changes, then reconcile and fix verified issues."
+      "Run Claude Bridge, Antigravity Bridge, Gemini, and subagent reviews of my local changes, then reconcile and fix verified issues."
     ]
   }
 }

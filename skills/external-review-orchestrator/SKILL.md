@@ -1,15 +1,16 @@
 ---
 name: external-review-orchestrator
-description: Use when Codex should coordinate multiple independent review passes across External Review Profiles, including Claude Bridge reviews, Codex Gemini profile reviews, subagent reviews, ordinary plus adversarial reviewers, then reconcile findings and optionally fix verified issues.
+description: Use when Codex should coordinate multiple independent review passes across External Review Profiles, including Claude Bridge reviews, Antigravity Bridge reviews, Codex Gemini profile reviews, subagent reviews, ordinary plus adversarial reviewers, then reconcile findings and optionally fix verified issues.
 ---
 
 # External Review Orchestrator
 
-Coordinate requested external reviews without dumping nested CLI logs into chat. Claude-specific execution is delegated to the `claude-bridge` submodule/plugin; do not recreate a local `claude` command profile in this project.
+Coordinate requested external reviews without dumping nested CLI logs into chat. Bridge-specific execution is delegated to the `claude-bridge` and `antigravity-bridge` submodules/plugins; do not recreate local CLI command profiles in this project.
 
 ## Provider Routing
 
 - Claude: use Claude Bridge from `claude-bridge/` in this source checkout, or the installed Claude Bridge plugin skills when available.
+- Antigravity: use Antigravity Bridge from `antigravity-bridge/` in this source checkout, or the installed Antigravity Bridge plugin skills when available.
 - Gemini: use `codex-gemini-profile`.
 - Subagents: use available multi-agent tooling only when the user asks for subagent reviews and such tooling is available.
 
@@ -38,6 +39,20 @@ Use `--deep` or `--model claude-opus-4-8` only when the scope is high-risk or th
 
 Claude Bridge owns Claude model normalization, prompt templates, result capture, and workflow-execution restrictions. If `claude-bridge/` is missing or not initialized, mark Claude blocked and tell the user to initialize the submodule; do not fall back to hand-written Claude CLI commands here.
 
+## Antigravity Bridge
+
+Use the submodule helper from the parent repository root:
+
+```powershell
+node .\antigravity-bridge\scripts\antigravity-bridge.mjs setup --json
+node .\antigravity-bridge\scripts\antigravity-bridge.mjs review --scope "current git diff in this repository"
+node .\antigravity-bridge\scripts\antigravity-bridge.mjs adversarial-review --scope "current git diff in this repository"
+```
+
+Use `--deep` only when the scope is high-risk or the user explicitly requests a deeper Antigravity model. Otherwise let Antigravity Bridge default to `Gemini 3.5 Flash (Medium)` for ordinary reviews and `Gemini 3.5 Flash (High)` for adversarial reviews.
+
+Antigravity Bridge owns `agy` model normalization, prompt templates, transcript extraction, result capture, and workflow-execution restrictions. If `antigravity-bridge/` is missing or not initialized, mark Antigravity blocked and tell the user to initialize the submodule; do not fall back to hand-written `agy` CLI commands here.
+
 ## Gemini
 
 Read `codex-gemini-profile` before running Gemini. Use this read-only shape:
@@ -52,11 +67,12 @@ For adversarial mode, preserve the same scope and ask Gemini to challenge implem
 
 - Normal review: prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
 - Adversarial review: challenge whether the change should ship; prioritize data loss, corruption, migrations, schema drift, concurrency, rollback, idempotency, trust boundaries, stale state, and missing tests.
-- Rescue: use Claude Bridge `rescue` only when the user asks for investigation, diagnosis, fix planning, or an explicitly constrained fix.
+- Rescue: use bridge-specific `rescue` only when the user asks for investigation, diagnosis, fix planning, or an explicitly constrained fix.
 
 ## Failure Gates
 
 - Claude Bridge: `node .\claude-bridge\scripts\claude-bridge.mjs setup --json` must report `ready: true`.
+- Antigravity Bridge: `node .\antigravity-bridge\scripts\antigravity-bridge.mjs setup --json` must report `ready: true`.
 - Gemini: `codex --profile gemini ... exec --ephemeral ... "Respond with exactly: OK"` must exit 0 and write `OK`.
 - Warnings are non-blocking only when the command exits 0 and produces the expected final answer.
 - Never count a failed provider toward the requested reviewer total.
