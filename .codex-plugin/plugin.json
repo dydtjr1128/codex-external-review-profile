@@ -1,15 +1,15 @@
 {
   "name": "external-review-profiles",
   "version": "0.1.0",
-  "description": "External reviewer profiles for Claude CLI and Codex Gemini adversarial reviews.",
+  "description": "External reviewer profiles and orchestration for Claude CLI, Codex Gemini, and subagent reviews.",
   "author": {
     "name": "Local developer"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "External Review Profiles",
-    "shortDescription": "Run Claude and Gemini external reviews.",
-    "longDescription": "External Review Profiles adds two Codex skills for running read-only external reviews: Claude CLI Profile and Codex Gemini Profile. Use them for ordinary second-pass reviews or adversarial challenge reviews, then verify findings locally before acting on them.",
+    "shortDescription": "Run and reconcile external reviews.",
+    "longDescription": "External Review Profiles adds Codex skills for orchestrating read-only external reviews across Claude CLI, Codex Gemini, and subagents. Use them for ordinary second-pass reviews or adversarial challenge reviews, then verify findings locally before acting on them.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [
@@ -17,7 +17,7 @@
     ],
     "defaultPrompt": [
       "Run an adversarial review of my local changes.",
-      "Compare Claude CLI and Gemini review findings."
+      "Run Claude, Gemini, and subagent reviews of my local changes, then reconcile and fix verified issues."
     ]
   }
 }
