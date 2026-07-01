@@ -26,7 +26,7 @@ Known local behavior: `claude auth status` can report `loggedIn: true` while pri
 
 ## Model Selection
 
-Do not pass user shorthand blindly to `--model`. Claude Code accepts model aliases such as `opus`, `sonnet`, and `fable`, or full model names such as `claude-opus-4-8`. Dot shorthand such as `opus4.8` is invalid and returns:
+Do not pass user shorthand blindly to `--model`. Claude Code accepts model aliases such as `opus`, `sonnet`, and `fable`, or full model names such as `claude-sonnet-5` and `claude-opus-4-8`. Dot shorthand such as `opus4.8`, `sonnet5`, or `sonnet-5` is invalid.
 
 ```text
 There's an issue with the selected model (opus4.8). It may not exist or you may not have access to it.
@@ -38,13 +38,31 @@ When the user asks for Opus 4.8, use the explicit full name:
 claude -p "Respond with exactly: OK" --model claude-opus-4-8 --no-session-persistence
 ```
 
+When the user asks for Sonnet 5, use the explicit full name:
+
+```powershell
+claude -p "Respond with exactly: OK" --model claude-sonnet-5 --no-session-persistence
+```
+
 When the user asks for the latest Opus without a specific version, use the alias:
 
 ```powershell
 claude -p "Respond with exactly: OK" --model opus --no-session-persistence
 ```
 
+When the user asks for the latest Sonnet without a specific version, use the alias:
+
+```powershell
+claude -p "Respond with exactly: OK" --model sonnet --no-session-persistence
+```
+
 If the user writes an obvious typo such as `opsu4.8` in a Claude review request, treat it as Opus 4.8 only when the surrounding request clearly means the Claude Opus model; otherwise ask a short clarification.
+
+For review work, choose models by difficulty and cost:
+
+- Use `claude-sonnet-5` by default for ordinary reviews, small-to-medium diffs, smoke checks, and routine second-pass review.
+- Use `claude-opus-4-8` sparingly for high-risk or deep reviews: security, data loss, migrations, concurrency, rollback/idempotency, cross-module architecture, ambiguous failures, or a final tie-breaker when Sonnet and Gemini disagree.
+- For many requested Claude reviewers, prefer mostly Sonnet 5 and add at most one Opus pass unless the user explicitly asks for more Opus coverage.
 
 ## Command Reference
 
@@ -61,6 +79,7 @@ claude -p "Prompt text" --no-session-persistence
 claude -p "Prompt text" --output-format json --no-session-persistence
 claude -p "Prompt text" --output-format stream-json --no-session-persistence
 claude -p "Prompt text" --model sonnet --effort high --no-session-persistence
+claude -p "Prompt text" --model claude-sonnet-5 --no-session-persistence
 claude -p "Prompt text" --model opus --no-session-persistence
 claude -p "Prompt text" --model claude-opus-4-8 --no-session-persistence
 claude -p "Prompt text" --add-dir "C:\path\to\extra\dir" --no-session-persistence
@@ -80,7 +99,7 @@ Important options:
 - `-p`, `--print`: run non-interactively and exit.
 - `--no-session-persistence`: avoid saving the Claude session.
 - `--output-format text|json|stream-json`: choose output shape for capture or parsing.
-- `--model`, `--effort`: select model and reasoning effort when needed. Use `opus` or `claude-opus-4-8` for Opus requests; do not use `opus4.8`.
+- `--model`, `--effort`: select model and reasoning effort when needed. Use `sonnet` or `claude-sonnet-5` for Sonnet requests, and `opus` or `claude-opus-4-8` for Opus requests. Do not use `sonnet5`, `sonnet-5`, or `opus4.8`.
 - `--add-dir`: allow Claude to inspect an additional directory.
 - `--tools`, `--allowed-tools`, `--disallowed-tools`: constrain tool access.
 - `--permission-mode plan|default|dontAsk|acceptEdits|auto|bypassPermissions`: choose approval behavior for tool use.
@@ -114,7 +133,7 @@ claude -p "Respond with exactly: OK" --no-session-persistence
 Review the current repository without asking Claude to edit:
 
 ```powershell
-claude -p "Review the current git diff. Do not modify files. Report only actionable bugs, regressions, missing tests, or high-risk assumptions with file/line references." --no-session-persistence
+claude -p "Review the current git diff. Do not modify files. Do not run workflows, CI, deployment scripts, or workflow automation. Report only actionable bugs, regressions, missing tests, or high-risk assumptions with file/line references." --model claude-sonnet-5 --no-session-persistence
 ```
 
 Capture a structured answer:
@@ -147,6 +166,8 @@ You are an adversarial software reviewer.
 
 Scope: <exact files, diff, branch, or design contract to review>
 Do not modify files.
+Do not run workflows, CI pipelines, deployment scripts, release tasks, or workflow automation.
+Use read-only inspection and lightweight local commands only when needed to ground findings.
 
 Try to find the strongest reasons this should not ship yet.
 Prioritize data loss, corruption, migrations, schema drift, concurrency, rollback, idempotency, trust boundaries, stale state, and missing tests.
@@ -155,7 +176,7 @@ Return in Korean.
 Start with Findings ordered by severity with file/line references. If no actionable finding, say so clearly.
 Then give a short structural verdict: what is solid, what is fragile, and the top 3 next improvements.
 '@
-claude -p $prompt --no-session-persistence
+claude -p $prompt --model claude-opus-4-8 --no-session-persistence
 ```
 
 For comparable dual-review runs, give Claude and Gemini the same prompt and scope text. Do not let either reviewer rewrite the scope.
@@ -195,6 +216,7 @@ For code review, prefer this shape:
 You are an independent code reviewer.
 Scope: current git diff in this repository.
 Do not edit files.
+Do not run workflows, CI, deployment scripts, or workflow automation.
 Prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
 Return findings first, ordered by severity, with file/line references.
 If there are no actionable findings, say that clearly and mention residual test gaps.
