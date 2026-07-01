@@ -14,7 +14,7 @@ Coordinate requested external reviews without dumping nested CLI logs into chat.
    - `claude-cli-profile` for Claude CLI.
    - `codex-gemini-profile` for Codex Gemini.
 3. Build one shared scope statement. Use the same scope for every provider and reviewer count.
-4. Normalize requested model names before running provider commands. For Claude Opus 4.8 requests, use `--model claude-opus-4-8`; do not pass invalid shorthand such as `opus4.8`.
+4. Normalize requested model names before running provider commands. For Claude Sonnet 5 requests, use `--model claude-sonnet-5`; for Claude Opus 4.8 requests, use `--model claude-opus-4-8`. Do not pass invalid shorthand such as `sonnet5`, `sonnet-5`, or `opus4.8`.
 5. Run a real smoke test for every CLI provider. Do not treat `auth status`, `--version`, or profile file presence as sufficient.
 6. If a provider smoke test fails, mark that provider blocked with the exact exit/error, skip its requested review runs, and continue with available reviewers unless the user explicitly required an all-provider stop.
 7. Capture CLI output to files. In chat, report only status lines, output paths, verified findings, and fixes.
@@ -26,11 +26,18 @@ Coordinate requested external reviews without dumping nested CLI logs into chat.
 
 For Claude, use model strings accepted by `claude --help`:
 
+- latest Sonnet: `--model sonnet`;
+- Sonnet 5 specifically: `--model claude-sonnet-5`;
 - latest Opus: `--model opus`;
-- Opus 4.8 specifically: `--model claude-opus-4-8`;
-- latest Sonnet: `--model sonnet`.
+- Opus 4.8 specifically: `--model claude-opus-4-8`.
 
-If the user says `opus4.8`, `opus 4.8`, or an obvious typo like `opsu4.8` while asking for a Claude review, normalize to `claude-opus-4-8`. If the CLI rejects a model with "There's an issue with the selected model", verify the alias with `claude --help` or a short `Respond with exactly: OK` smoke test before declaring Claude unavailable.
+If the user says `sonnet5` or `sonnet-5` while asking for a Claude review, normalize to `claude-sonnet-5`. If the user says `opus4.8`, `opus 4.8`, or an obvious typo like `opsu4.8`, normalize to `claude-opus-4-8`. If the CLI rejects a model with "There's an issue with the selected model", verify the alias with `claude --help` or a short `Respond with exactly: OK` smoke test before declaring Claude unavailable.
+
+Choose Claude models dynamically:
+
+- Use Sonnet 5 for the default Claude pass, ordinary review, small-to-medium diffs, and broad multi-review coverage.
+- Use Opus sparingly because it is expensive. Reserve it for high-risk adversarial review, security, data loss, migrations, concurrency, rollback/idempotency, complex architecture, or a tie-breaker after cheaper reviewers disagree.
+- For many Claude reviewers, allocate most runs to Sonnet 5 and at most one Opus run unless the user explicitly requests more Opus passes or the scope is clearly high-risk.
 
 ## CLI Capture Pattern
 
@@ -43,6 +50,7 @@ $prompt = @'
 You are an independent code reviewer.
 Scope: current git diff in this repository.
 Do not edit files.
+Do not run workflows, CI, deployment scripts, or workflow automation.
 Prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
 Return findings first, ordered by severity, with file/line references.
 If there are no actionable findings, say that clearly and mention residual test gaps.
@@ -50,7 +58,7 @@ If there are no actionable findings, say that clearly and mention residual test 
 
 $out = Join-Path (Get-Location) ".codex\external-review-profiles\run-$(Get-Date -Format yyyyMMdd-HHmmss)"
 New-Item -ItemType Directory -Force $out | Out-Null
-$claudeModel = "claude-opus-4-8" # only when the user requested Opus 4.8
+$claudeModel = "claude-sonnet-5" # default review model
 & claude -p $prompt --model $claudeModel --output-format json --no-session-persistence > (Join-Path $out "claude-normal-01.json") 2> (Join-Path $out "claude-normal-01.log")
 ```
 
@@ -61,6 +69,7 @@ $prompt = @'
 You are an independent code reviewer.
 Scope: current git diff in this repository.
 Do not edit files.
+Do not run workflows, CI, deployment scripts, or workflow automation.
 Prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
 Return findings first, ordered by severity, with file/line references.
 If there are no actionable findings, say that clearly and mention residual test gaps.
@@ -77,6 +86,8 @@ For adversarial mode, use the same scope and switch only the reviewer stance:
 You are an adversarial software reviewer.
 Scope: <same exact scope>
 Do not edit files.
+Do not run workflows, CI pipelines, deployment scripts, release tasks, or workflow automation.
+Use read-only inspection and lightweight local commands only when needed to ground findings.
 Try to find the strongest reasons this should not ship yet.
 Prioritize data loss, corruption, migrations, schema drift, concurrency, rollback, idempotency, trust boundaries, stale state, and missing tests.
 Report only material findings grounded in files, line numbers, or command output.
@@ -90,9 +101,9 @@ Use one shared `$out` directory when running multiple batches so results land to
 ```powershell
 $out = Join-Path (Get-Location) ".codex\external-review-profiles\run-$(Get-Date -Format yyyyMMdd-HHmmss)"
 New-Item -ItemType Directory -Force $out | Out-Null
-$claudeModel = "claude-opus-4-8" # only when the user requested Opus 4.8
+$claudeModel = "claude-sonnet-5" # default; switch one deep/high-risk pass to claude-opus-4-8 when warranted
 & claude -p $prompt --model $claudeModel --output-format json --no-session-persistence > (Join-Path $out "claude-normal-01.json") 2> (Join-Path $out "claude-normal-01.log")
-& claude -p $adversarialPrompt --model $claudeModel --output-format json --no-session-persistence > (Join-Path $out "claude-adversarial-01.json") 2> (Join-Path $out "claude-adversarial-01.log")
+& claude -p $adversarialPrompt --model claude-opus-4-8 --output-format json --no-session-persistence > (Join-Path $out "claude-adversarial-01.json") 2> (Join-Path $out "claude-adversarial-01.log")
 & codex --profile gemini -s read-only -a never -C (Get-Location) exec --ephemeral -o (Join-Path $out "gemini-normal-01.md") $prompt *> (Join-Path $out "gemini-normal-01.log")
 & codex --profile gemini -s read-only -a never -C (Get-Location) exec --ephemeral -o (Join-Path $out "gemini-adversarial-01.md") $adversarialPrompt *> (Join-Path $out "gemini-adversarial-01.log")
 ```
@@ -102,6 +113,7 @@ Read Claude final text from the JSON `result` field and Gemini final text from t
 ## Failure Gates
 
 - Claude: `claude auth status` can say logged in while `claude -p` still returns `401 Invalid authentication credentials`. The print-mode smoke test is the gate.
+- Claude model strings: a failed `--model sonnet5` or `--model sonnet-5` is not an auth failure; retry with `--model claude-sonnet-5` when the user requested Sonnet 5.
 - Claude model strings: a failed `--model opus4.8` is not an auth failure; retry with `--model claude-opus-4-8` when the user requested Opus 4.8.
 - Gemini: profile existence and `codex --profile gemini --version` are not enough. The `exec --ephemeral` smoke test must exit 0 and write `OK`.
 - Warnings are non-blocking only when the command exits 0 and produces the expected final answer.
