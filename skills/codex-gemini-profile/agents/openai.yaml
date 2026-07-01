@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codex Gemini Profile"
-  short_description: "Run Codex CLI through the Gemini profile"
-  default_prompt: "Use $codex-gemini-profile to run a Gemini adversarial review."

@@ -4,7 +4,7 @@
 
 - Write project docs, commit subjects, commit bodies, and release notes in English.
 - Keep bullet lists compact: use one to four bullets per list and do not put blank lines between bullet items.
-- Keep README and skill terminology consistent with Claude Bridge and Antigravity Bridge.
+- Keep README and provider terminology consistent with Claude Bridge and Antigravity Bridge.
 
 ## Git And Release
 

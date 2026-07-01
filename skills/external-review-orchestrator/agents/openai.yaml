@@ -1,4 +1,0 @@
-interface:
-  display_name: "External Review Orchestrator"
-  short_description: "Coordinate Claude Bridge, Gemini, and subagent reviews"
-  default_prompt: "Use $external-review-orchestrator to run external reviews, reconcile findings, and fix verified issues."
