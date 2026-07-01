@@ -1,0 +1,3 @@
+[submodule "claude-bridge"]
+	path = claude-bridge
+	url = https://github.com/dydtjr1128/claude-bridge.git

@@ -1,127 +1,69 @@
 ---
 name: external-review-orchestrator
-description: Use when Codex should coordinate multiple independent review passes across External Review Profiles, including requests to run Claude CLI reviews, Codex Gemini profile reviews, subagent reviews, ordinary plus adversarial reviewers, then reconcile findings and optionally fix verified issues.
+description: Use when Codex should coordinate multiple independent review passes across External Review Profiles, including Claude Bridge reviews, Codex Gemini profile reviews, subagent reviews, ordinary plus adversarial reviewers, then reconcile findings and optionally fix verified issues.
 ---
 
 # External Review Orchestrator
 
-Coordinate requested external reviews without dumping nested CLI logs into chat. Use this skill when the user invokes the whole External Review Profiles plugin or asks for a mix of Claude, Gemini, and subagent reviewers.
+Coordinate requested external reviews without dumping nested CLI logs into chat. Claude-specific execution is delegated to the `claude-bridge` submodule/plugin; do not recreate a local `claude` command profile in this project.
+
+## Provider Routing
+
+- Claude: use Claude Bridge from `claude-bridge/` in this source checkout, or the installed Claude Bridge plugin skills when available.
+- Gemini: use `codex-gemini-profile`.
+- Subagents: use available multi-agent tooling only when the user asks for subagent reviews and such tooling is available.
 
 ## Workflow
 
-1. Inspect the local scope first: `git status --short`, `git diff --stat`, and targeted files when needed.
-2. Read the provider skill before using that provider:
-   - `claude-cli-profile` for Claude CLI.
-   - `codex-gemini-profile` for Codex Gemini.
-3. Build one shared scope statement. Use the same scope for every provider and reviewer count.
-4. Normalize requested model names before running provider commands. For Claude Sonnet 5 requests, use `--model claude-sonnet-5`; for Claude Opus 4.8 requests, use `--model claude-opus-4-8`. Do not pass invalid shorthand such as `sonnet5`, `sonnet-5`, or `opus4.8`.
-5. Run a real smoke test for every CLI provider. Do not treat `auth status`, `--version`, or profile file presence as sufficient.
-6. If a provider smoke test fails, mark that provider blocked with the exact exit/error, skip its requested review runs, and continue with available reviewers unless the user explicitly required an all-provider stop.
-7. Capture CLI output to files. In chat, report only status lines, output paths, verified findings, and fixes.
-8. Ask subagents for review only when a subagent/multi-agent tool is available. Keep prompts no-edit and scope-identical.
-9. Reconcile all findings yourself. Verify file and line claims locally before editing or reporting them as true.
-10. If the user asked to improve the code, patch only verified issues, then run relevant tests or validation.
+1. Inspect the local scope first with `git status --short`, `git diff --stat`, and targeted file reads when needed.
+2. Build one shared scope statement. Use the same scope for every provider and reviewer count.
+3. Run a real smoke test for every CLI provider. Do not treat `auth status`, `--version`, or profile file presence as sufficient.
+4. If a provider smoke test fails, mark that provider blocked with the exact exit/error, skip its requested review runs, and continue with available reviewers unless the user explicitly required an all-provider stop.
+5. Capture CLI output to files. In chat, report only status lines, output paths, verified findings, and fixes.
+6. Keep every review pass read-only. Do not ask reviewers to edit files.
+7. Reconcile all findings yourself. Verify file and line claims locally before editing or reporting them as true.
+8. If the user asked to improve the code, patch only verified issues, then run relevant tests or validation.
 
-## Model Normalization
+## Claude Bridge
 
-For Claude, use model strings accepted by `claude --help`:
-
-- latest Sonnet: `--model sonnet`;
-- Sonnet 5 specifically: `--model claude-sonnet-5`;
-- latest Opus: `--model opus`;
-- Opus 4.8 specifically: `--model claude-opus-4-8`.
-
-If the user says `sonnet5` or `sonnet-5` while asking for a Claude review, normalize to `claude-sonnet-5`. If the user says `opus4.8`, `opus 4.8`, or an obvious typo like `opsu4.8`, normalize to `claude-opus-4-8`. If the CLI rejects a model with "There's an issue with the selected model", verify the alias with `claude --help` or a short `Respond with exactly: OK` smoke test before declaring Claude unavailable.
-
-Choose Claude models dynamically:
-
-- Use Sonnet 5 for the default Claude pass, ordinary review, small-to-medium diffs, and broad multi-review coverage.
-- Use Opus sparingly because it is expensive. Reserve it for high-risk adversarial review, security, data loss, migrations, concurrency, rollback/idempotency, complex architecture, or a tie-breaker after cheaper reviewers disagree.
-- For many Claude reviewers, allocate most runs to Sonnet 5 and at most one Opus run unless the user explicitly requests more Opus passes or the scope is clearly high-risk.
-
-## CLI Capture Pattern
-
-Capture Claude and Gemini output to files instead of pasting nested logs into chat.
-
-Claude:
+Use the submodule helper from the parent repository root:
 
 ```powershell
-$prompt = @'
-You are an independent code reviewer.
-Scope: current git diff in this repository.
-Do not edit files.
-Do not run workflows, CI, deployment scripts, or workflow automation.
-Prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
-Return findings first, ordered by severity, with file/line references.
-If there are no actionable findings, say that clearly and mention residual test gaps.
-'@
-
-$out = Join-Path (Get-Location) ".codex\external-review-profiles\run-$(Get-Date -Format yyyyMMdd-HHmmss)"
-New-Item -ItemType Directory -Force $out | Out-Null
-$claudeModel = "claude-sonnet-5" # default review model
-& claude -p $prompt --model $claudeModel --output-format json --no-session-persistence > (Join-Path $out "claude-normal-01.json") 2> (Join-Path $out "claude-normal-01.log")
+node .\claude-bridge\scripts\claude-bridge.mjs setup --json
+node .\claude-bridge\scripts\claude-bridge.mjs review --scope "current git diff in this repository"
+node .\claude-bridge\scripts\claude-bridge.mjs adversarial-review --scope "current git diff in this repository"
 ```
 
-Gemini:
+Use `--deep` or `--model claude-opus-4-8` only when the scope is high-risk or the user explicitly requests Opus. Otherwise let Claude Bridge default to `claude-sonnet-5`.
+
+Claude Bridge owns Claude model normalization, prompt templates, result capture, and workflow-execution restrictions. If `claude-bridge/` is missing or not initialized, mark Claude blocked and tell the user to initialize the submodule; do not fall back to hand-written Claude CLI commands here.
+
+## Gemini
+
+Read `codex-gemini-profile` before running Gemini. Use this read-only shape:
 
 ```powershell
-$prompt = @'
-You are an independent code reviewer.
-Scope: current git diff in this repository.
-Do not edit files.
-Do not run workflows, CI, deployment scripts, or workflow automation.
-Prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
-Return findings first, ordered by severity, with file/line references.
-If there are no actionable findings, say that clearly and mention residual test gaps.
-'@
-
-$out = Join-Path (Get-Location) ".codex\external-review-profiles\run-$(Get-Date -Format yyyyMMdd-HHmmss)"
-New-Item -ItemType Directory -Force $out | Out-Null
-& codex --profile gemini -s read-only -a never -C (Get-Location) exec --ephemeral -o (Join-Path $out "gemini-normal-01.md") $prompt *> (Join-Path $out "gemini-normal-01.log")
+codex --profile gemini -s read-only -a never -C "C:\path\to\repo" exec --ephemeral "Review the current git diff. Do not modify files. Report only actionable correctness bugs, regressions, missing tests, or high-risk assumptions with file/line references."
 ```
 
-For adversarial mode, use the same scope and switch only the reviewer stance:
+For adversarial mode, preserve the same scope and ask Gemini to challenge implementation direction, design choices, assumptions, tradeoffs, and failure modes. Do not let Gemini rewrite the scope.
 
-```text
-You are an adversarial software reviewer.
-Scope: <same exact scope>
-Do not edit files.
-Do not run workflows, CI pipelines, deployment scripts, release tasks, or workflow automation.
-Use read-only inspection and lightweight local commands only when needed to ground findings.
-Try to find the strongest reasons this should not ship yet.
-Prioritize data loss, corruption, migrations, schema drift, concurrency, rollback, idempotency, trust boundaries, stale state, and missing tests.
-Report only material findings grounded in files, line numbers, or command output.
-Return in Korean.
-Start with Findings ordered by severity. If no actionable finding, say so clearly.
-Then give a short structural verdict: solid parts, fragile parts, and top 3 improvements.
-```
+## Review Modes
 
-Use one shared `$out` directory when running multiple batches so results land together:
-
-```powershell
-$out = Join-Path (Get-Location) ".codex\external-review-profiles\run-$(Get-Date -Format yyyyMMdd-HHmmss)"
-New-Item -ItemType Directory -Force $out | Out-Null
-$claudeModel = "claude-sonnet-5" # default; switch one deep/high-risk pass to claude-opus-4-8 when warranted
-& claude -p $prompt --model $claudeModel --output-format json --no-session-persistence > (Join-Path $out "claude-normal-01.json") 2> (Join-Path $out "claude-normal-01.log")
-& claude -p $adversarialPrompt --model claude-opus-4-8 --output-format json --no-session-persistence > (Join-Path $out "claude-adversarial-01.json") 2> (Join-Path $out "claude-adversarial-01.log")
-& codex --profile gemini -s read-only -a never -C (Get-Location) exec --ephemeral -o (Join-Path $out "gemini-normal-01.md") $prompt *> (Join-Path $out "gemini-normal-01.log")
-& codex --profile gemini -s read-only -a never -C (Get-Location) exec --ephemeral -o (Join-Path $out "gemini-adversarial-01.md") $adversarialPrompt *> (Join-Path $out "gemini-adversarial-01.log")
-```
-
-Read Claude final text from the JSON `result` field and Gemini final text from the markdown file. Inspect logs only for failures.
+- Normal review: prioritize correctness bugs, behavioral regressions, security risks, and missing tests.
+- Adversarial review: challenge whether the change should ship; prioritize data loss, corruption, migrations, schema drift, concurrency, rollback, idempotency, trust boundaries, stale state, and missing tests.
+- Rescue: use Claude Bridge `rescue` only when the user asks for investigation, diagnosis, fix planning, or an explicitly constrained fix.
 
 ## Failure Gates
 
-- Claude: `claude auth status` can say logged in while `claude -p` still returns `401 Invalid authentication credentials`. The print-mode smoke test is the gate.
-- Claude model strings: a failed `--model sonnet5` or `--model sonnet-5` is not an auth failure; retry with `--model claude-sonnet-5` when the user requested Sonnet 5.
-- Claude model strings: a failed `--model opus4.8` is not an auth failure; retry with `--model claude-opus-4-8` when the user requested Opus 4.8.
-- Gemini: profile existence and `codex --profile gemini --version` are not enough. The `exec --ephemeral` smoke test must exit 0 and write `OK`.
+- Claude Bridge: `node .\claude-bridge\scripts\claude-bridge.mjs setup --json` must report `ready: true`.
+- Gemini: `codex --profile gemini ... exec --ephemeral ... "Respond with exactly: OK"` must exit 0 and write `OK`.
 - Warnings are non-blocking only when the command exits 0 and produces the expected final answer.
 - Never count a failed provider toward the requested reviewer total.
 
 ## Subagent Reviews
 
-When subagents are requested, use available multi-agent tooling if present. Give each subagent the same scope and no-edit instruction. Do not pass your expected answer or suspected bug. Label outputs as `subagent-normal` or `subagent-adversarial`, then verify their claims like any other advisory result.
+When subagents are requested, give each subagent the same scope and no-edit instruction. Do not pass your expected answer or suspected bug. Label outputs as `subagent-normal` or `subagent-adversarial`, then verify their claims like any other advisory result.
 
 ## Final Reporting
 
@@ -132,4 +74,4 @@ Report:
 - verified findings only, grouped by severity;
 - patches made and validation commands run.
 
-If a provider failed authentication, say it is blocked by local credentials and name the exact command that failed. Do not imply that a skipped provider reviewed the code.
+If a provider failed authentication, setup, or smoke testing, say it is blocked and name the exact command that failed. Do not imply that a skipped provider reviewed the code.

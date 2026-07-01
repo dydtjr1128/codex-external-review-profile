@@ -1,4 +1,0 @@
-interface:
-  display_name: "Claude CLI Profile"
-  short_description: "Run Claude CLI through a local profile"
-  default_prompt: "Use $claude-cli-profile to run an adversarial review of my local changes."
