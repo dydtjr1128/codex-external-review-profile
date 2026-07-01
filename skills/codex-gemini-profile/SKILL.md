@@ -20,7 +20,7 @@ codex --profile gemini --version
 Use non-interactive execution:
 
 ```powershell
-codex --profile gemini exec --ephemeral -C "C:\path\to\workspace" "Respond with exactly: OK"
+codex --profile gemini -s read-only -a never -C "C:\path\to\workspace" exec --ephemeral -o "$env:TEMP\gemini-smoke.txt" "Respond with exactly: OK"
 ```
 
 Add `--skip-git-repo-check` when running outside a Git repository.
@@ -145,6 +145,12 @@ Capture the final answer to a file:
 
 ```powershell
 codex --profile gemini -C "C:\path\to\repo" exec --ephemeral -o "C:\path\to\gemini-review.txt" "Review the current git diff and return findings first."
+```
+
+Capture quietly in PowerShell when not using the orchestrator:
+
+```powershell
+& codex --profile gemini -s read-only -a never -C "C:\path\to\repo" exec --ephemeral -o "gemini-review.md" $prompt *> "gemini-review.log"
 ```
 
 ## Adversarial Review Mode
