@@ -51,3 +51,16 @@ Enforce a five-minute default at the process boundary so prompt compliance is no
 ## Scope
 
 This change affects review, adversarial review, and non-fix rescue behavior in Claude Bridge and Antigravity Bridge, plus the parent profile documentation and pinned submodule revisions. It does not change release tags or install/update external plugin caches automatically.
+
+## Focused Inspection Addendum
+
+The five-minute process timeout must be paired with an explicit inspection budget so a reviewer does not spend most of the pass on broad repository discovery.
+
+- Start from the exact diff or named files in the supplied scope.
+- Inspect only directly relevant dependencies needed to support a concrete finding.
+- Do not perform repository-wide discovery, recursively follow references, or pursue speculative context.
+- Once a finding has enough static evidence, report it. If evidence remains insufficient, state the uncertainty and remaining gap instead of continuing to investigate.
+
+Apply this contract consistently to review, adversarial review, and non-fix rescue prompts and skills for both providers. Keep the five-minute hard timeout unchanged; the new wording governs how the existing time budget is spent.
+
+After the source changes are committed and pushed, remove the installed profile and provider plugins from the personal marketplace installation state. Register the current parent checkout and both current provider submodule checkouts in the personal marketplace, reinstall all three plugins, and verify their installed paths and versions. A new Codex task is still required before newly installed skills appear in active thread context.

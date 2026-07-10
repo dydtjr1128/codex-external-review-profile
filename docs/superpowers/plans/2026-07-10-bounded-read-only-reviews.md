@@ -236,3 +236,38 @@ Expected: both test suites PASS; all diff checks are clean; only intentional com
 - [ ] **Step 2: Report installation boundary**
 
 Report that source and pinned provider revisions are complete, but cached installed plugins do not update automatically. Do not reinstall plugins, move release tags, push branches, or mutate user-global caches without a separate explicit request.
+
+### Task 5: Focused inspection policy and plugin refresh
+
+**Files:**
+- Modify: `claude-bridge/tests/claude-bridge.test.mjs`
+- Modify: `claude-bridge/prompts/review.md`
+- Modify: `claude-bridge/prompts/adversarial-review.md`
+- Modify: `claude-bridge/prompts/rescue.md`
+- Modify: `claude-bridge/skills/review/SKILL.md`
+- Modify: `claude-bridge/skills/adversarial-review/SKILL.md`
+- Modify: `claude-bridge/skills/rescue/SKILL.md`
+- Modify: `antigravity-bridge/tests/antigravity-bridge.test.mjs`
+- Modify: matching Antigravity prompt and skill files
+- Modify: `README.md`, `AGENTS.md`, and `CLAUDE.md`
+- Update: personal marketplace plugin entries and installed plugin state
+
+**Interfaces:**
+- Consumes: the existing one-attempt `5m0s` review contract.
+- Produces: a shared focused-inspection contract and fresh personal marketplace installations sourced from the current checkout.
+
+- [ ] **Step 1: Add failing policy assertions**
+
+Require every prompt and skill to contain the exact focused-inspection sentences from the design addendum. Run each provider unit suite and verify failure because the policy is absent.
+
+- [ ] **Step 2: Apply the minimal prompt and skill wording**
+
+Add the focused-inspection contract immediately after the bounded-pass rules. Do not change helper timeout values, model selection, or output handling.
+
+- [ ] **Step 3: Verify, commit, and push**
+
+Run both provider unit suites, all six skill validators, active-policy searches, and `git diff --check`. Commit and push each provider before committing and pushing the parent gitlinks and policy documentation.
+
+- [ ] **Step 4: Replace personal plugin registrations**
+
+Remove installed `external-review-profiles@personal` and `claude-bridge@personal`. Update the personal marketplace so `external-review-profiles`, `claude-bridge`, and `antigravity-bridge` point to the current parent and submodule paths. Reinstall all three and verify `codex plugin list` reports each as installed and enabled from the expected path.
