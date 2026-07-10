@@ -4,7 +4,7 @@
 
 **Goal:** Prevent unrequested program execution and open-ended review runs while keeping static review inspection available.
 
-**Architecture:** Each provider owns the policy in its skill and prompt files and enforces the five-minute ceiling in its helper process. Provider tests use fake local executables, never real Claude or Antigravity calls, and the parent repository records the shared routing policy and updated submodule revisions.
+**Architecture:** Each provider owns the policy in its skill and prompt files and enforces the five-minute ceiling in its helper process. Provider tests import guarded helper modules and inject pure spawn-result fakes, never launch Claude or Antigravity executables, and the parent repository records the shared routing policy and updated submodule revisions.
 
 **Tech Stack:** Markdown skills/prompts, Node.js ESM, `node:test`, Git submodules.
 
@@ -34,21 +34,20 @@
 
 **Interfaces:**
 - Consumes: existing `review`, `adversarial-review`, and `rescue` helper commands.
-- Produces: `--timeout <duration>` with default `5m0s`, `parseDuration(value)` returning milliseconds, and result metadata containing `timeout` and `timedOut`.
+- Produces: `--timeout <duration>` with default `5m0s`, import-safe `parseDuration(value)`, `run(command, args, options)`, and `commandReport(result)` exports, and result metadata containing `timeout` and `timedOut`.
 
 - [ ] **Step 1: Write failing helper and policy tests**
 
-Create an end-to-end `node:test` harness that places a fake `claude` executable first on `PATH`. The fake executable supports `FAKE_PROVIDER_MODE=success|failure|timeout`; success prints `{"result":"review complete"}`, failure exits `7`, and timeout waits `500ms`. Run the helper with `--timeout 50ms` for the timeout case.
+Create an import-based `node:test` harness. Guard the helper entry point with `import.meta.url` so imports do not call `main()`. Inject a pure `spawn` function into `run()` and return plain success, status-7 failure, and `ETIMEDOUT` result objects. No test may launch a child process or resolve an external provider executable.
 
 Add assertions equivalent to:
 
 ```js
-assert.equal(success.status, 0);
-assert.match(success.stdout, /review complete/);
-assert.notEqual(failure.status, 0);
-assert.match(failure.stderr + failure.stdout, /status|failed|7/i);
-assert.notEqual(timedOut.status, 0);
-assert.ok(timedOut.durationMs < 2_000);
+assert.equal(parseDuration("5m0s"), 300_000);
+assert.equal(capturedSpawnOptions.timeout, 50);
+assert.equal(commandReport(successResult).timedOut, false);
+assert.equal(commandReport(failureResult).status, 7);
+assert.equal(commandReport(timeoutResult).timedOut, true);
 
 for (const file of promptFiles) {
   const text = readFileSync(file, "utf8");
@@ -63,7 +62,7 @@ for (const file of promptFiles) {
 
 Run: `node --test tests/claude-bridge.test.mjs`
 
-Expected: FAIL because `--timeout` is not implemented and current prompt text permits lightweight local commands and automatic deep selection.
+Expected: FAIL because the import-safe exports and `--timeout` are not implemented and current prompt text permits lightweight local commands and automatic deep selection. No external executable starts during RED.
 
 - [ ] **Step 3: Implement Claude process timeout**
 
@@ -129,9 +128,9 @@ git commit -m "fix: 리뷰 실행과 시간 제한 강화"
 
 - [ ] **Step 1: Write failing helper and policy tests**
 
-Create the same fake-provider harness with a fake `agy` executable. For success, print `review complete`; for failure, exit `7`; for timeout, wait `500ms`. Invoke review with `--print-timeout 50ms` and assert completion in under two seconds.
+Create the same import-safe, dependency-injected unit harness as Task 1. Inject plain success, status-7 failure, and `ETIMEDOUT` results into the helper's spawn boundary. No test may launch a child process or resolve `agy`.
 
-Use the same prompt-policy assertions as Task 1 and additionally assert that a non-empty stdout result does not incur the transcript polling delay.
+Use the same prompt-policy assertions as Task 1 and additionally inject a transcript lookup spy to assert that non-empty stdout does not trigger transcript polling.
 
 - [ ] **Step 2: Run the tests and verify RED**
 
