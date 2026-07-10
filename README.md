@@ -2,13 +2,13 @@
 
 Pin Claude Bridge and Antigravity Bridge together as external review providers for Codex.
 
-This repository is a parent/profile repository. It keeps the provider repositories available at known `v1.0.0` commits and documents a conservative router/gate policy for using them.
+This repository is a parent/profile repository. It keeps the provider repositories available at known `v1.0.0` commits and documents an explicit, bounded router/gate policy for using them.
 
 ## What This Is
 
 - A version-pinned profile for Claude Bridge and Antigravity Bridge.
 - A local source checkout that can run provider helper scripts from submodules.
-- A documentation layer for default provider choice and token-aware review routing.
+- A documentation layer for explicit provider selection and bounded review routing.
 
 ## What This Is Not
 
@@ -18,9 +18,10 @@ This repository is a parent/profile repository. It keeps the provider repositori
 
 ## Providers
 
-- Claude Bridge is the default provider for ordinary review, broad second-pass review, and routine rescue planning.
-- Antigravity Bridge is opt-in because its usable token budget is small.
-- Run both providers only when explicitly requested or when a small high-risk scope justifies the extra pass.
+- Claude Bridge runs only when the user explicitly selects Claude Bridge.
+- Antigravity Bridge runs only when the user explicitly selects Antigravity Bridge.
+- Running both providers requires an explicit request for both providers.
+- Risk, scope, or an incomplete result never selects another provider automatically.
 
 Provider details live in the submodule READMEs:
 
@@ -83,29 +84,30 @@ Start a new Codex thread after installation so provider skills are loaded.
 
 ## Router Gate Policy
 
-Use Claude Bridge unless the request explicitly asks for Antigravity or all providers.
+Do not choose a provider from a generic review or investigation request. The user must explicitly select Claude Bridge, Antigravity Bridge, or both.
 
-- Default review: Claude Bridge only.
-- Antigravity review: explicit opt-in only.
-- Dual review: explicit `--all` or `--providers claude,antigravity` intent only.
-- Scope discipline: keep Antigravity scopes small and concrete.
+- Provider selection: every provider is an explicit opt-in.
+- Model depth: `--deep` or any deeper model is an explicit opt-in.
+- Additional work: retries, extra passes, and additional reviewers require a new explicit request.
+- Program execution: tests, builds, package managers, scripts, servers, applications, CI, deployment, release, and workflow automation require a separate explicit user request; review or investigation alone is not permission.
+
+Give each explicitly selected provider one attempt and one bounded pass that must complete within five minutes (`5m0s`). If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
 
 If a wrapper script is added later, it should follow this contract:
 
 ```powershell
-node .\scripts\external-review-router.mjs review --scope "current git diff"
+node .\scripts\external-review-router.mjs review --provider claude --scope "current git diff"
 node .\scripts\external-review-router.mjs review --providers claude,antigravity --scope "small auth diff"
 node .\scripts\external-review-router.mjs adversarial-review --provider antigravity --scope "one risky file"
 ```
 
-The first command should run Claude only. Antigravity should run only when selected by `--provider antigravity`, `--providers claude,antigravity`, or `--all`.
+The first command should run Claude only because Claude is explicitly selected. Antigravity should run only when selected by `--provider antigravity`, `--providers claude,antigravity`, or `--all`. No command should add `--deep`, retry, or start another pass unless the user explicitly requests it.
 
 ## Local Helper Use
 
-Run Claude Bridge from this checkout:
+Run Claude Bridge from this checkout only when Claude Bridge is explicitly requested:
 
 ```powershell
-node .\claude-bridge\scripts\claude-bridge.mjs setup --json
 node .\claude-bridge\scripts\claude-bridge.mjs review --scope "current git diff in this repository"
 node .\claude-bridge\scripts\claude-bridge.mjs adversarial-review --scope "current git diff in this repository"
 ```
@@ -113,9 +115,15 @@ node .\claude-bridge\scripts\claude-bridge.mjs adversarial-review --scope "curre
 Run Antigravity Bridge only when requested:
 
 ```powershell
-node .\antigravity-bridge\scripts\antigravity-bridge.mjs setup --json
 node .\antigravity-bridge\scripts\antigravity-bridge.mjs review --scope "small targeted diff"
 node .\antigravity-bridge\scripts\antigravity-bridge.mjs adversarial-review --scope "one high-risk file"
+```
+
+Setup diagnostics are executable validation. Run a setup command only when the user separately and explicitly requests that validation:
+
+```powershell
+node .\claude-bridge\scripts\claude-bridge.mjs setup --json
+node .\antigravity-bridge\scripts\antigravity-bridge.mjs setup --json
 ```
 
 Both helpers capture prompts, logs, raw output, and normalized results under their `.codex/` output directories.

@@ -8,15 +8,15 @@
   "interface": {
     "displayName": "External Review Profiles",
     "shortDescription": "Pin external review provider plugins.",
-    "longDescription": "External Review Profiles is a parent/profile repository that pins Claude Bridge and Antigravity Bridge as external review providers. It does not auto-install nested plugins; install the provider plugins separately or run their submodule helpers directly. Use Claude Bridge by default and opt into Antigravity only when explicitly requested or when a small high-risk scope justifies its limited token budget.",
+    "longDescription": "External Review Profiles is a parent/profile repository that pins Claude Bridge and Antigravity Bridge as external review providers. It does not auto-install nested plugins; install the provider plugins separately or run their submodule helpers directly. Select every provider explicitly. Each selected provider gets one review attempt bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [
       "Review"
     ],
     "defaultPrompt": [
-      "Use Claude Bridge to review my local changes.",
-      "Use Antigravity Bridge only when I explicitly request it or provide a small high-risk scope."
+      "Use Claude Bridge for one review attempt of my local changes, bounded to 5m0s, without executing programs.",
+      "Use Antigravity Bridge for one review attempt of my local changes, bounded to 5m0s, without executing programs."
     ]
   }
 }

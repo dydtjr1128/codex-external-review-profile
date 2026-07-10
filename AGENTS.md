@@ -19,6 +19,13 @@
 - Fetch submodule tags with `--force` when those release tags were intentionally moved.
 - Do not edit submodule internals from this parent repository unless the user explicitly asks for submodule changes.
 
+## External Review Policy
+
+- Run a provider only when the user explicitly selects Claude Bridge, Antigravity Bridge, or both; never infer provider selection from risk, scope, or an incomplete result.
+- Give each selected provider one attempt bounded to five minutes (`5m0s`); if time or evidence is insufficient, return supported findings and the remaining gap.
+- Deep mode, deeper models, retries, extra passes, and additional reviewers or providers are explicit opt-ins only and must never be added automatically.
+- Program execution requires a separate explicit user request; a review or investigation request alone does not authorize tests, builds, package managers, scripts, servers, applications, CI, deployment, release, or workflow automation.
+
 ## Web Access
 
 - If browser or web search tools hit certificate errors, first try a CLI fallback such as `curl-cffi get https://www.naver.com`.
