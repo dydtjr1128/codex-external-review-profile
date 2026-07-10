@@ -93,6 +93,8 @@ Do not choose a provider from a generic review or investigation request. The use
 
 Give each explicitly selected provider one attempt and one bounded pass that must complete within five minutes (`5m0s`). If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
 
+Keep the pass focused: start with the exact diff or named files, inspect only directly relevant dependencies needed to support a concrete finding, and report uncertainty instead of performing repository-wide discovery, recursively following references, or pursuing speculative context.
+
 If a wrapper script is added later, it should follow this contract:
 
 ```powershell
