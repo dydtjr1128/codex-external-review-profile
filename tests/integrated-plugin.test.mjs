@@ -35,6 +35,7 @@ test("root manifest exposes the integrated skills directory", () => {
     readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"),
   );
   assert.equal(manifest.skills, "./skills/");
+  assert.match(manifest.version, /^1\.0\.0(?:\+codex\.[0-9]+)?$/);
 });
 
 test("all provider-qualified skills have matching frontmatter names", () => {
@@ -58,7 +59,7 @@ test("Claude review timeouts scale for slower models without changing Antigravit
   assert.equal(bridge.CLAUDE_DEFAULT_TIMEOUT, "10m0s");
   assert.equal(bridge.defaultTimeoutForModel("claude-sonnet-5"), "10m0s");
   assert.equal(bridge.defaultTimeoutForModel("claude-opus-4-8"), "15m0s");
-  assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "15m0s");
+  assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "20m0s");
 
   for (const relativePath of [
     "skills/claude-review/SKILL.md",

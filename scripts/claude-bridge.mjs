@@ -11,11 +11,17 @@ const PROMPT_DIR = path.join(ROOT_DIR, "prompts", "claude");
 const VALID_COMMANDS = new Set(["setup", "review", "adversarial-review", "rescue"]);
 export const CLAUDE_DEFAULT_TIMEOUT = "10m0s";
 export const CLAUDE_SLOW_MODEL_TIMEOUT = "15m0s";
+export const CLAUDE_FABLE_TIMEOUT = "20m0s";
 
 export function defaultTimeoutForModel(model) {
-  return /(?:opus|fable)/i.test(String(model))
-    ? CLAUDE_SLOW_MODEL_TIMEOUT
-    : CLAUDE_DEFAULT_TIMEOUT;
+  const normalized = String(model);
+  if (/fable/i.test(normalized)) {
+    return CLAUDE_FABLE_TIMEOUT;
+  }
+  if (/opus/i.test(normalized)) {
+    return CLAUDE_SLOW_MODEL_TIMEOUT;
+  }
+  return CLAUDE_DEFAULT_TIMEOUT;
 }
 
 function usage() {
@@ -29,7 +35,7 @@ function usage() {
     "Options:",
     "  --cwd <path>          Run from this repository path.",
     "  --output-dir <path>   Store Claude JSON, log, prompt, and markdown output here.",
-    `  --timeout <duration>  Stop a review after this duration (default: ${CLAUDE_DEFAULT_TIMEOUT}; Opus/Fable: ${CLAUDE_SLOW_MODEL_TIMEOUT}).`,
+    `  --timeout <duration>  Stop a review after this duration (default: ${CLAUDE_DEFAULT_TIMEOUT}; Opus: ${CLAUDE_SLOW_MODEL_TIMEOUT}; Fable: ${CLAUDE_FABLE_TIMEOUT}).`,
     "  --dry-run             Print the generated prompt without calling Claude.",
     "  --json                Print machine-readable wrapper output.",
     "  --deep                Select claude-opus-4-8 when explicitly requested."

@@ -82,7 +82,7 @@ Do not choose a provider from a generic review or investigation request. The use
 - Additional work: retries, extra passes, and additional reviewers require a new explicit request.
 - Program execution: tests, builds, package managers, scripts, servers, applications, CI, deployment, release, and workflow automation require a separate explicit user request; review or investigation alone is not permission.
 
-Give Claude Bridge one attempt bounded to ten minutes (`10m0s`), or fifteen minutes (`15m0s`) when the selected model name contains `opus` or `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). An explicit timeout always overrides the model default. If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
+Give Claude Bridge one attempt bounded to ten minutes (`10m0s`), fifteen minutes (`15m0s`) when the selected model name contains `opus`, or twenty minutes (`20m0s`) when it contains `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). An explicit timeout always overrides the model default. If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
 
 Keep the pass focused: start with the exact diff or named files, inspect only directly relevant dependencies needed to support a concrete finding, and report uncertainty instead of performing repository-wide discovery, recursively following references, or pursuing speculative context.
 
