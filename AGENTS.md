@@ -12,6 +12,7 @@
 - Use commit bodies only when useful; if used, keep bullet lines adjacent with no blank lines between them.
 - Before pushing, verify `git diff --check` and inspect commit messages for non-ASCII text and repeated blank lines.
 - For release tags, create or move `v1.0.1` at the current release commit and push the tag when requested.
+- Keep the root plugin version plain, such as `1.0.1`. Add a `+codex.*` cachebuster only when the user explicitly requests same-version cache invalidation.
 
 ## Submodules
 

@@ -35,7 +35,7 @@ test("root manifest exposes the integrated skills directory", () => {
     readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"),
   );
   assert.equal(manifest.skills, "./skills/");
-  assert.equal(manifest.version.split("+")[0], "1.0.1");
+  assert.equal(manifest.version, "1.0.1");
 });
 
 test("all provider-qualified skills have matching frontmatter names", () => {
