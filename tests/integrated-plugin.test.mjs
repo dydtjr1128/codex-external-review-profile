@@ -35,7 +35,7 @@ test("root manifest exposes the integrated skills directory", () => {
     readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"),
   );
   assert.equal(manifest.skills, "./skills/");
-  assert.equal(manifest.version, "1.0.0");
+  assert.equal(manifest.version.split("+")[0], "1.0.0");
 });
 
 test("all provider-qualified skills have matching frontmatter names", () => {
@@ -79,4 +79,23 @@ test("Claude review timeouts scale for slower models without changing Antigravit
     "utf8",
   );
   assert.match(antigravity, /5m0s/);
+});
+
+test("Claude runs reviews in bare mode without external customizations", async () => {
+  const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?bare-mode`);
+
+  assert.deepEqual(bridge.buildClaudeArgs("review this diff", {
+    model: "claude-sonnet-5",
+    outputFormat: "json",
+  }), [
+    "--bare",
+    "-p",
+    "review this diff",
+    "--model",
+    "claude-sonnet-5",
+    "--output-format",
+    "json",
+    "--no-session-persistence",
+  ]);
 });

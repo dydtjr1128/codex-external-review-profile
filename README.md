@@ -121,6 +121,8 @@ node .\scripts\antigravity-bridge.mjs setup --json
 
 Both helpers capture prompts, logs, raw output, and normalized results under their `.codex/` output directories.
 
+Claude Bridge runs Claude Code with `--bare`, so MCP servers, plugins, skills, hooks, `CLAUDE.md`, and auto memory do not load during setup checks or review-oriented commands. Built-in repository inspection tools remain available for the requested review.
+
 ## Review Handling
 
 Treat every provider result as advisory.
