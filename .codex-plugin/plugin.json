@@ -1,14 +1,15 @@
 {
   "name": "external-review-profiles",
   "version": "0.1.0",
-  "description": "Pinned external review provider profile for Claude Bridge and Antigravity Bridge.",
+  "description": "Integrated Claude Bridge and Antigravity Bridge review plugin.",
   "author": {
     "name": "Local developer"
   },
+  "skills": "./skills/",
   "interface": {
     "displayName": "External Review Profiles",
-    "shortDescription": "Pin external review provider plugins.",
-    "longDescription": "External Review Profiles is a parent/profile repository that pins Claude Bridge and Antigravity Bridge as external review providers. It does not auto-install nested plugins; install the provider plugins separately or run their submodule helpers directly. Select every provider explicitly. Each selected provider gets one review attempt bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
+    "shortDescription": "Use Claude and Antigravity review skills.",
+    "longDescription": "External Review Profiles integrates provider-qualified Claude Bridge and Antigravity Bridge skills in one plugin while pinning both provider source repositories. Select every provider explicitly. Each selected provider gets one review attempt bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [
