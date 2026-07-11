@@ -22,7 +22,7 @@
 ## External Review Policy
 
 - Run a provider only when the user explicitly selects Claude Bridge, Antigravity Bridge, or both; never infer provider selection from risk, scope, or an incomplete result.
-- Give each selected provider one attempt bounded to five minutes (`5m0s`); if time or evidence is insufficient, return supported findings and the remaining gap.
+- Give Claude Bridge one attempt bounded to ten minutes (`10m0s`), or fifteen minutes (`15m0s`) when the selected model name contains `opus` or `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). If time or evidence is insufficient, return supported findings and the remaining gap.
 - Deep mode, deeper models, retries, extra passes, and additional reviewers or providers are explicit opt-ins only and must never be added automatically.
 - Program execution requires a separate explicit user request; a review or investigation request alone does not authorize tests, builds, package managers, scripts, servers, applications, CI, deployment, release, or workflow automation.
 - Keep inspection narrow: start with the exact diff or named files, inspect only directly relevant dependencies for a concrete finding, and report uncertainty instead of broadening scope or recursively following references.

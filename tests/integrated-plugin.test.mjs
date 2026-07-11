@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillNames = [
@@ -49,4 +49,33 @@ test("the aggregate plugin contains every provider runtime asset", () => {
   for (const relativePath of runtimeFiles) {
     assert.ok(existsSync(path.join(root, relativePath)), `missing ${relativePath}`);
   }
+});
+
+test("Claude review timeouts scale for slower models without changing Antigravity", async () => {
+  const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?timeout-policy`);
+
+  assert.equal(bridge.CLAUDE_DEFAULT_TIMEOUT, "10m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-sonnet-5"), "10m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-opus-4-8"), "15m0s");
+  assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "15m0s");
+
+  for (const relativePath of [
+    "skills/claude-review/SKILL.md",
+    "skills/claude-adversarial-review/SKILL.md",
+    "skills/claude-rescue/SKILL.md",
+    "prompts/claude/review.md",
+    "prompts/claude/adversarial-review.md",
+    "prompts/claude/rescue.md",
+  ]) {
+    const content = readFileSync(path.join(root, relativePath), "utf8");
+    assert.match(content, /ten minutes|10m0s|\{\{TIMEOUT\}\}/i, relativePath);
+    assert.doesNotMatch(content, /within five minutes|default is `5m0s`|`5m0s` default/i, relativePath);
+  }
+
+  const antigravity = readFileSync(
+    path.join(root, "scripts", "antigravity-bridge.mjs"),
+    "utf8",
+  );
+  assert.match(antigravity, /5m0s/);
 });
