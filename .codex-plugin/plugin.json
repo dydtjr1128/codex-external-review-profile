@@ -1,6 +1,6 @@
 {
   "name": "external-review-profiles",
-  "version": "1.0.0+codex.20260711152426",
+  "version": "1.0.1+codex.20260711153120",
   "description": "Integrated Claude Bridge and Antigravity Bridge review plugin.",
   "author": {
     "name": "Local developer"

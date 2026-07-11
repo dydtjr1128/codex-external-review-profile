@@ -35,7 +35,7 @@ test("root manifest exposes the integrated skills directory", () => {
     readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"),
   );
   assert.equal(manifest.skills, "./skills/");
-  assert.equal(manifest.version.split("+")[0], "1.0.0");
+  assert.equal(manifest.version.split("+")[0], "1.0.1");
 });
 
 test("all provider-qualified skills have matching frontmatter names", () => {
@@ -81,15 +81,24 @@ test("Claude review timeouts scale for slower models without changing Antigravit
   assert.match(antigravity, /5m0s/);
 });
 
-test("Claude runs reviews in bare mode without external customizations", async () => {
+test("Claude runs reviews with isolated read-only-oriented parameters", async () => {
   const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
-  const bridge = await import(`${pathToFileURL(bridgePath).href}?bare-mode`);
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?isolated-mode`);
 
+  assert.equal(bridge.CLAUDE_SETUP_TIMEOUT, "2m0s");
+  assert.equal(bridge.CLAUDE_REVIEW_TOOLS, "Read,Glob,Grep,Bash");
   assert.deepEqual(bridge.buildClaudeArgs("review this diff", {
     model: "claude-sonnet-5",
     outputFormat: "json",
   }), [
-    "--bare",
+    "--safe-mode",
+    "--strict-mcp-config",
+    "--disable-slash-commands",
+    "--no-chrome",
+    "--tools",
+    "Read,Glob,Grep,Bash",
+    "--permission-mode",
+    "dontAsk",
     "-p",
     "review this diff",
     "--model",
@@ -98,4 +107,26 @@ test("Claude runs reviews in bare mode without external customizations", async (
     "json",
     "--no-session-persistence",
   ]);
+});
+
+test("Claude helper rejects ambiguous and unsupported parameters", async () => {
+  const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?parameter-validation`);
+
+  assert.throws(() => bridge.parseArgs(["--timout", "1m0s"]), /Unknown option/);
+  assert.throws(
+    () => bridge.validateCommandOptions("setup", { model: "sonnet" }),
+    /not valid for setup/,
+  );
+  assert.throws(
+    () => bridge.validateCommandOptions("review", { deep: true, model: "opus" }),
+    /either --deep or --model/,
+  );
+  assert.deepEqual(
+    bridge.parseArgs(["--scope", "current diff", "--", "--flag", "behavior"]),
+    {
+      options: { scope: "current diff" },
+      positionals: ["--flag", "behavior"],
+    },
+  );
 });

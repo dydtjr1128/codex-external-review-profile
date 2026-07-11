@@ -9,9 +9,14 @@ import { fileURLToPath } from "node:url";
 const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PROMPT_DIR = path.join(ROOT_DIR, "prompts", "claude");
 const VALID_COMMANDS = new Set(["setup", "review", "adversarial-review", "rescue"]);
+const BOOLEAN_OPTIONS = new Set(["json", "dry-run", "deep", "help"]);
+const VALUE_OPTIONS = new Set(["cwd", "output-dir", "timeout", "language", "scope", "model"]);
+const SETUP_OPTIONS = new Set(["cwd", "timeout", "json", "help"]);
 export const CLAUDE_DEFAULT_TIMEOUT = "10m0s";
 export const CLAUDE_SLOW_MODEL_TIMEOUT = "15m0s";
 export const CLAUDE_FABLE_TIMEOUT = "20m0s";
+export const CLAUDE_SETUP_TIMEOUT = "2m0s";
+export const CLAUDE_REVIEW_TOOLS = "Read,Glob,Grep,Bash";
 
 export function defaultTimeoutForModel(model) {
   const normalized = String(model);
@@ -25,7 +30,18 @@ export function defaultTimeoutForModel(model) {
 }
 
 export function buildClaudeArgs(prompt, options = {}) {
-  const args = ["--bare", "-p", prompt];
+  const args = [
+    "--safe-mode",
+    "--strict-mcp-config",
+    "--disable-slash-commands",
+    "--no-chrome",
+    "--tools",
+    CLAUDE_REVIEW_TOOLS,
+    "--permission-mode",
+    "dontAsk",
+    "-p",
+    prompt
+  ];
   if (options.model) {
     args.push("--model", options.model);
   }
@@ -39,34 +55,41 @@ export function buildClaudeArgs(prompt, options = {}) {
 function usage() {
   console.log([
     "Usage:",
-    "  node scripts/claude-bridge.mjs setup [--json]",
-    "  node scripts/claude-bridge.mjs review [--model <model>] [--timeout <duration>] [--language <lang>] [--scope <text>] [focus ...]",
+    "  node scripts/claude-bridge.mjs setup [--timeout <duration>] [--json]",
+    "  node scripts/claude-bridge.mjs review [--model <model>|--deep] [--timeout <duration>] [--language <lang>] [--scope <text>] [focus ...]",
     "  node scripts/claude-bridge.mjs adversarial-review [--model <model>|--deep] [--timeout <duration>] [--language <lang>] [--scope <text>] [focus ...]",
     "  node scripts/claude-bridge.mjs rescue [--model <model>|--deep] [--timeout <duration>] [--language <lang>] [--scope <text>] [request ...]",
     "",
     "Options:",
     "  --cwd <path>          Run from this repository path.",
     "  --output-dir <path>   Store Claude JSON, log, prompt, and markdown output here.",
-    `  --timeout <duration>  Stop a review after this duration (default: ${CLAUDE_DEFAULT_TIMEOUT}; Opus: ${CLAUDE_SLOW_MODEL_TIMEOUT}; Fable: ${CLAUDE_FABLE_TIMEOUT}).`,
+    `  --timeout <duration>  Stop setup after ${CLAUDE_SETUP_TIMEOUT}, or a review after ${CLAUDE_DEFAULT_TIMEOUT} (Opus: ${CLAUDE_SLOW_MODEL_TIMEOUT}; Fable: ${CLAUDE_FABLE_TIMEOUT}).`,
     "  --dry-run             Print the generated prompt without calling Claude.",
     "  --json                Print machine-readable wrapper output.",
     "  --deep                Select claude-opus-4-8 when explicitly requested."
   ].join("\n"));
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const options = {};
   const positionals = [];
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if (value === "--") {
+      positionals.push(...argv.slice(index + 1));
+      break;
+    }
     if (!value.startsWith("--")) {
       positionals.push(value);
       continue;
     }
     const key = value.slice(2);
-    if (["json", "dry-run", "deep"].includes(key)) {
+    if (BOOLEAN_OPTIONS.has(key)) {
       options[key] = true;
       continue;
+    }
+    if (!VALUE_OPTIONS.has(key)) {
+      throw new Error(`Unknown option: --${key}`);
     }
     const next = argv[index + 1];
     if (next == null || next.startsWith("--")) {
@@ -76,6 +99,23 @@ function parseArgs(argv) {
     index += 1;
   }
   return { options, positionals };
+}
+
+export function validateCommandOptions(command, options, positionals = []) {
+  if (command === "setup") {
+    for (const key of Object.keys(options)) {
+      if (!SETUP_OPTIONS.has(key)) {
+        throw new Error(`Option --${key} is not valid for setup.`);
+      }
+    }
+    if (positionals.length > 0) {
+      throw new Error("Setup does not accept positional arguments.");
+    }
+    return;
+  }
+  if (options.deep && options.model) {
+    throw new Error("Use either --deep or --model, not both.");
+  }
 }
 
 export function parseDuration(value) {
@@ -231,14 +271,17 @@ function printOutput(payload, asJson) {
 
 function handleSetup(options) {
   const cwd = path.resolve(options.cwd ?? process.cwd());
+  const timeout = String(options.timeout ?? CLAUDE_SETUP_TIMEOUT).trim();
+  const timeoutMs = parseDuration(timeout);
   const version = run("claude", ["--version"], { cwd });
   const smoke = run("claude", buildClaudeArgs("Respond with exactly: OK", {
     model: "claude-sonnet-5"
-  }), { cwd });
+  }), { cwd, timeoutMs });
   const versionReport = commandReport(version);
   const smokeReport = commandReport(smoke);
   const payload = {
     ready: version.status === 0 && smoke.status === 0 && outputText(smoke.stdout).trim() === "OK",
+    timeout,
     version: versionReport,
     smoke: smokeReport
   };
@@ -340,6 +383,11 @@ function main() {
     throw new Error(`Unknown command: ${command}`);
   }
   const { options, positionals } = parseArgs(argv);
+  if (options.help) {
+    usage();
+    return;
+  }
+  validateCommandOptions(command, options, positionals);
   if (command === "setup") {
     handleSetup(options);
     return;

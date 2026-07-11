@@ -121,7 +121,7 @@ node .\scripts\antigravity-bridge.mjs setup --json
 
 Both helpers capture prompts, logs, raw output, and normalized results under their `.codex/` output directories.
 
-Claude Bridge runs Claude Code with `--bare`, so MCP servers, plugins, skills, hooks, `CLAUDE.md`, and auto memory do not load during setup checks or review-oriented commands. Built-in repository inspection tools remain available for the requested review.
+Claude Bridge runs Claude Code with `--safe-mode` and explicit MCP, slash-command, and Chrome exclusions. It preserves normal authentication while preventing project customizations from inflating review startup or context. Built-in tools are limited to `Read`, `Glob`, `Grep`, and `Bash`, and `dontAsk` permission mode makes unavailable operations fail instead of pausing for approval. Organization-managed policy may still apply.
 
 ## Review Handling
 

@@ -17,6 +17,10 @@ If the user explicitly requests executable validation, `setup` remains available
 node .\scripts\claude-bridge.mjs setup
 ```
 
+## Runtime Isolation
+
+The helper runs Claude Code with safe mode, no MCP configuration, slash commands disabled, Chrome disabled, and built-in tools limited to `Read`, `Glob`, `Grep`, and `Bash`. It uses `dontAsk` permission mode so unavailable actions fail instead of pausing for approval. Organization-managed policy may still apply.
+
 ## Bounded Execution Policy
 
 Do not execute programs unless the user explicitly and directly requests that execution. This includes tests, builds, package managers, scripts, servers, applications, CI, deployment, release, and workflow automation. A review or investigation request alone is not permission to execute them.
