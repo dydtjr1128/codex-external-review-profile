@@ -26,6 +26,7 @@
 - Give Claude Bridge one attempt bounded to ten minutes (`10m0s`), fifteen minutes (`15m0s`) when the selected model name contains `opus`, or twenty minutes (`20m0s`) when it contains `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). If time or evidence is insufficient, return supported findings and the remaining gap.
 - Deep mode, deeper models, retries, extra passes, and additional reviewers or providers are explicit opt-ins only and must never be added automatically.
 - Program execution requires a separate explicit user request; a review or investigation request alone does not authorize tests, builds, package managers, scripts, servers, applications, CI, deployment, release, or workflow automation.
+- Read-only repository inspection commands needed to obtain the requested scope, including `git diff`, `git status`, `git show`, `git log`, `git blame`, and `git ls-files`, are allowed; they must not modify files, the index, refs, configuration, or other repository state.
 - Keep inspection narrow: start with the exact diff or named files, inspect only directly relevant dependencies for a concrete finding, and report uncertainty instead of broadening scope or recursively following references.
 
 ## Web Access

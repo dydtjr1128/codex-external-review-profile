@@ -7,7 +7,7 @@ Make review-oriented provider runs predictable: a review request authorizes one 
 ## Behavioral Contract
 
 - Without a separate explicit request, reviewers must not run tests, builds, package managers, scripts, servers, applications, CI, deployment, release, or workflow automation.
-- Static inspection needed to read the requested diff and files remains available. Review prompts do not need an explicit shell-read allowance.
+- Static inspection needed to read the requested diff and files remains available. Review prompts explicitly allow only the read-only repository commands needed to obtain that scope, such as `git diff`, `git status`, `git show`, `git log`, `git blame`, and `git ls-files`, and prohibit commands that modify repository state.
 - Ordinary and adversarial reviews get one attempt with a five-minute hard timeout. Timeout, empty output, or provider failure is reported as incomplete rather than retried automatically.
 - Deep models, expanded scope, additional reviewers, and retries require explicit user intent. High-risk scope may be reported as residual risk but does not silently enable deep mode.
 
@@ -17,7 +17,7 @@ Make review-oriented provider runs predictable: a review request authorizes one 
 
 Update the Claude Bridge and Antigravity Bridge review-oriented skills so their preflight does not run a separate smoke prompt by default. The requested review invocation itself is the readiness check. Keep setup diagnostics available only when the user explicitly asks for setup or troubleshooting.
 
-The skills must distinguish static verification from execution. Findings may be checked against files and line references, but tests or other programs are not run unless separately requested.
+The skills must distinguish static verification from project or validation execution. Findings may be checked against files, line references, and read-only repository commands, but tests or project programs are not run unless separately requested.
 
 ### Provider prompts
 
@@ -44,7 +44,7 @@ Enforce a five-minute default at the process boundary so prompt compliance is no
 
 ## Verification
 
-- Add prompt-policy checks for the program-execution prohibition, five-minute bounded pass, no automatic retry, and no automatic deep escalation.
+- Add prompt-policy checks for the project-execution prohibition, the read-only repository inspection allowance and state-mutation prohibition, the bounded pass, no automatic retry, and no automatic deep escalation.
 - Add helper tests that simulate timeout, success, and provider failure without invoking real external reviewers.
 - Run static checks against all review-oriented skill and prompt variants to prevent Claude and Antigravity policy drift.
 

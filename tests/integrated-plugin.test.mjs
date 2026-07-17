@@ -52,6 +52,21 @@ test("the aggregate plugin contains every provider runtime asset", () => {
   }
 });
 
+test("all review policies allow scoped read-only repository inspection without state changes", () => {
+  const policyFiles = [
+    ...skillNames.map((name) => `skills/${name}/SKILL.md`),
+    ...runtimeFiles.filter((relativePath) => relativePath.startsWith("prompts/")),
+  ];
+
+  for (const relativePath of policyFiles) {
+    const content = readFileSync(path.join(root, relativePath), "utf8");
+    assert.match(content, /Read-only repository inspection commands required to obtain the requested scope are allowed/);
+    assert.match(content, /git diff/);
+    assert.match(content, /do not run commands that modify files, the index, refs, configuration, or other repository state/);
+    assert.doesNotMatch(content, /Do not execute programs unless the user explicitly and directly requests that execution/);
+  }
+});
+
 test("Claude review timeouts scale for slower models without changing Antigravity", async () => {
   const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
   const bridge = await import(`${pathToFileURL(bridgePath).href}?timeout-policy`);
