@@ -3,14 +3,14 @@
   "version": "1.0.1",
   "description": "Integrated Claude Bridge and Antigravity Bridge review plugin.",
   "author": {
-    "name": "Local developer"
+    "name": "dydtjr1128"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "External Review Profiles",
     "shortDescription": "Use Claude and Antigravity review skills.",
     "longDescription": "External Review Profiles integrates provider-qualified Claude Bridge and Antigravity Bridge skills in one plugin while pinning both provider source repositories. Select every provider explicitly. Claude Bridge gets one review attempt bounded to ten minutes (10m0s), fifteen minutes (15m0s) for Opus, or twenty minutes (20m0s) for Fable, while Antigravity Bridge remains bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
-    "developerName": "Local developer",
+    "developerName": "dydtjr1128",
     "category": "Productivity",
     "capabilities": [
       "Review"

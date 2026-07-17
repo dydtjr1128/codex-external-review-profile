@@ -90,7 +90,7 @@ Keep the pass focused: start with the exact diff or named files, inspect only di
 If a wrapper script is added later, it should follow this contract:
 
 ```powershell
-node .\scripts\external-review-router.mjs review --provider claude --scope "current git diff"
+node .\scripts\external-review-router.mjs review --provider claude --scope "all current uncommitted changes, including staged, unstaged, and untracked files"
 node .\scripts\external-review-router.mjs review --providers claude,antigravity --scope "small auth diff"
 node .\scripts\external-review-router.mjs adversarial-review --provider antigravity --scope "one risky file"
 ```
@@ -102,8 +102,8 @@ The first command should run Claude only because Claude is explicitly selected. 
 Run the integrated Claude Bridge helper only when Claude Bridge is explicitly requested:
 
 ```powershell
-node .\scripts\claude-bridge.mjs review --scope "current git diff in this repository"
-node .\scripts\claude-bridge.mjs adversarial-review --scope "current git diff in this repository"
+node .\scripts\claude-bridge.mjs review --scope "all current uncommitted changes, including staged, unstaged, and untracked files"
+node .\scripts\claude-bridge.mjs adversarial-review --scope "all current uncommitted changes, including staged, unstaged, and untracked files"
 ```
 
 Run the integrated Antigravity Bridge helper only when requested:
@@ -155,3 +155,7 @@ AGENTS.md
 CLAUDE.md
 README.md
 ```
+
+## License
+
+Licensed under the Apache License, Version 2.0. See `LICENSE` for the full terms.

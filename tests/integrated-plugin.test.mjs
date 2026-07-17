@@ -36,6 +36,12 @@ test("root manifest exposes the integrated skills directory", () => {
   );
   assert.equal(manifest.skills, "./skills/");
   assert.equal(manifest.version, "1.0.1");
+  assert.equal(manifest.author.name, "dydtjr1128");
+});
+
+test("root repository declares Apache-2.0 licensing", () => {
+  assert.ok(existsSync(path.join(root, "LICENSE")));
+  assert.match(readFileSync(path.join(root, "LICENSE"), "utf8"), /Apache License[\s\S]*Version 2\.0/);
 });
 
 test("all provider-qualified skills have matching frontmatter names", () => {
@@ -62,9 +68,19 @@ test("all review policies allow scoped read-only repository inspection without s
     const content = readFileSync(path.join(root, relativePath), "utf8");
     assert.match(content, /Read-only repository inspection commands required to obtain the requested scope are allowed/);
     assert.match(content, /git diff/);
+    assert.match(content, /staged, unstaged, and untracked files/);
     assert.match(content, /do not run commands that modify files, the index, refs, configuration, or other repository state/);
     assert.doesNotMatch(content, /Do not execute programs unless the user explicitly and directly requests that execution/);
   }
+});
+
+test("both helpers default to the complete uncommitted scope", async () => {
+  const expected = "all current uncommitted changes in this repository, including staged, unstaged, and untracked files";
+  const claude = await import(`${pathToFileURL(path.join(root, "scripts", "claude-bridge.mjs")).href}?default-scope`);
+  const antigravity = await import(`${pathToFileURL(path.join(root, "scripts", "antigravity-bridge.mjs")).href}?default-scope`);
+
+  assert.equal(claude.DEFAULT_REVIEW_SCOPE, expected);
+  assert.equal(antigravity.DEFAULT_REVIEW_SCOPE, expected);
 });
 
 test("Claude review timeouts scale for slower models without changing Antigravity", async () => {
