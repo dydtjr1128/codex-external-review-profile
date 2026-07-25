@@ -89,6 +89,7 @@ test("Claude review timeouts scale for slower models without changing Antigravit
 
   assert.equal(bridge.CLAUDE_DEFAULT_TIMEOUT, "10m0s");
   assert.equal(bridge.defaultTimeoutForModel("claude-sonnet-5"), "10m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-opus-5"), "15m0s");
   assert.equal(bridge.defaultTimeoutForModel("claude-opus-4-8"), "15m0s");
   assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "20m0s");
 
@@ -110,6 +111,17 @@ test("Claude review timeouts scale for slower models without changing Antigravit
     "utf8",
   );
   assert.match(antigravity, /5m0s/);
+});
+
+test("Claude helper maps current Opus shorthand and deep mode to Opus 5", async () => {
+  const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?opus-5-policy`);
+
+  for (const model of ["opus", "opus5", "opus-5", "opus 5", "claude-opus-5"]) {
+    assert.equal(bridge.normalizeModel(model, "review", false), "claude-opus-5", model);
+  }
+  assert.equal(bridge.normalizeModel(undefined, "review", true), "claude-opus-5");
+  assert.equal(bridge.normalizeModel("opus4.8", "review", false), "claude-opus-4-8");
 });
 
 test("Claude runs reviews with isolated read-only-oriented parameters", async () => {

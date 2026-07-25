@@ -124,6 +124,8 @@ Both helpers capture prompts, logs, raw output, and normalized results under the
 
 Claude Bridge runs Claude Code with `--safe-mode` and explicit MCP, slash-command, and Chrome exclusions. It preserves normal authentication while preventing project customizations from inflating review startup or context. Built-in tools are limited to `Read`, `Glob`, `Grep`, and `Bash`, and `dontAsk` permission mode makes unavailable operations fail instead of pausing for approval. Organization-managed policy may still apply.
 
+When Opus is explicitly selected, `--model opus`, Opus 5 shorthand, and `--deep` resolve to `claude-opus-5`. Pin the legacy model explicitly with `--model claude-opus-4-8` or an `opus4.8` shorthand.
+
 ## Review Handling
 
 Treat every provider result as advisory.
