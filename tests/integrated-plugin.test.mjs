@@ -121,7 +121,17 @@ test("Claude helper maps current Opus shorthand and deep mode to Opus 5", async 
     assert.equal(bridge.normalizeModel(model, "review", false), "claude-opus-5", model);
   }
   assert.equal(bridge.normalizeModel(undefined, "review", true), "claude-opus-5");
-  assert.equal(bridge.normalizeModel("opus4.8", "review", false), "claude-opus-4-8");
+  for (const model of ["opus4.8", "opus 4.8", "claude-opus-4-8", "CLAUDE-OPUS-4-8"]) {
+    assert.equal(bridge.normalizeModel(model, "review", false), "claude-opus-4-8", model);
+  }
+});
+
+test("Claude review commands default to Sonnet 5 without explicit deep mode", async () => {
+  const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
+  const bridge = await import(`${pathToFileURL(bridgePath).href}?default-model-policy`);
+
+  assert.equal(bridge.normalizeModel(undefined, "review", false), "claude-sonnet-5");
+  assert.equal(bridge.normalizeModel(undefined, "adversarial-review", false), "claude-sonnet-5");
 });
 
 test("Claude runs reviews with isolated read-only-oriented parameters", async () => {

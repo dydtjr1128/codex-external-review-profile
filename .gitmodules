@@ -1,6 +1,6 @@
 [submodule "claude-bridge"]
 	path = claude-bridge
-	url = https://github.com/dydtjr1128/claude-bridge.git
+	url = https://dydtjr1128@github.com/dydtjr1128/claude-bridge.git
 [submodule "antigravity-bridge"]
 	path = antigravity-bridge
-	url = https://github.com/dydtjr1128/antigravity-bridge.git
+	url = https://dydtjr1128@github.com/dydtjr1128/antigravity-bridge.git
