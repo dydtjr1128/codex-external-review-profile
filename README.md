@@ -122,9 +122,15 @@ node .\scripts\antigravity-bridge.mjs setup --json
 
 Both helpers capture prompts, logs, raw output, and normalized results under their `.codex/` output directories.
 
-Claude Bridge runs Claude Code with `--safe-mode` and explicit MCP, slash-command, and Chrome exclusions. It preserves normal authentication while preventing project customizations from inflating review startup or context. Built-in tools are limited to `Read`, `Glob`, `Grep`, and `Bash`, and `dontAsk` permission mode makes unavailable operations fail instead of pausing for approval. Organization-managed policy may still apply.
+Claude Bridge runs Claude Code with `--safe-mode` and explicit MCP, slash-command, and Chrome exclusions. It preserves normal authentication while preventing project customizations from inflating review startup or context. By default, built-in tools are limited to `Read`, `Glob`, `Grep`, and `Bash`, and `dontAsk` permission mode makes unavailable operations fail instead of pausing for approval. Organization-managed policy may still apply.
 
-When Opus is explicitly selected, `--model opus`, Opus 5 shorthand, and `--deep` resolve to `claude-opus-5`. Pin the legacy model explicitly with `--model claude-opus-4-8` or an `opus4.8` shorthand.
+When Opus is explicitly selected, `--model opus`, `opus5.5`, and `--deep` resolve to `claude-opus-5-5`. Explicit `--model fable` or `fable5.1` selects `claude-fable-5-1`. Versioned `opus5`, `fable5`, and `opus4.8` aliases preserve their original models. The default remains Sonnet 5; Fable requires explicit selection. Model IDs follow the [Anthropic reference](https://platform.claude.com/docs/en/models/overview).
+
+For an explicitly requested Claude rescue fix, use `rescue --allow-edits`. This enables and permits the built-in Edit and Write tools; ordinary rescue calls remain investigation-only, and review commands reject the flag. Shell writes and executable validation are not authorized by this flag.
+
+Both setup commands share one deadline across version and smoke probes and skip smoke after a failed version probe or exhausted budget. Claude defaults to two minutes (`--timeout`), Antigravity to one minute (`--print-timeout`). Unknown, conflicting, and unsupported command options fail before provider execution.
+
+Antigravity accepts only stdout from the current invocation. Empty output is a failed result even with exit code 0; unrelated or stale transcripts are never reused. Its Flash defaults now use Gemini 3.8 from the `agy models` catalog observed on 2026-09-23. Explicit Gemini 3.5 aliases remain pinned; Antigravity's Claude labels follow its own catalog, not Claude Bridge's API IDs.
 
 ## Review Handling
 

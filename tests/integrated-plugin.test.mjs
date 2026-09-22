@@ -113,14 +113,14 @@ test("Claude review timeouts scale for slower models without changing Antigravit
   assert.match(antigravity, /5m0s/);
 });
 
-test("Claude helper maps current Opus shorthand and deep mode to Opus 5", async () => {
+test("Claude helper preserves Opus 5 pins and maps deep mode to Opus 5.5", async () => {
   const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
   const bridge = await import(`${pathToFileURL(bridgePath).href}?opus-5-policy`);
 
-  for (const model of ["opus", "opus5", "opus-5", "opus 5", "claude-opus-5"]) {
+  for (const model of ["opus5", "opus-5", "opus 5", "claude-opus-5"]) {
     assert.equal(bridge.normalizeModel(model, "review", false), "claude-opus-5", model);
   }
-  assert.equal(bridge.normalizeModel(undefined, "review", true), "claude-opus-5");
+  assert.equal(bridge.normalizeModel(undefined, "review", true), "claude-opus-5-5");
   for (const model of ["opus4.8", "opus 4.8", "claude-opus-4-8", "CLAUDE-OPUS-4-8"]) {
     assert.equal(bridge.normalizeModel(model, "review", false), "claude-opus-4-8", model);
   }
