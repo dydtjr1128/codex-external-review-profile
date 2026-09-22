@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PROMPT_DIR = path.join(ROOT_DIR, "prompts", "claude");
 const VALID_COMMANDS = new Set(["setup", "review", "adversarial-review", "rescue"]);
-const BOOLEAN_OPTIONS = new Set(["json", "dry-run", "deep", "help"]);
+const BOOLEAN_OPTIONS = new Set(["json", "dry-run", "deep", "help", "allow-edits"]);
 const VALUE_OPTIONS = new Set(["cwd", "output-dir", "timeout", "language", "scope", "model"]);
 const SETUP_OPTIONS = new Set(["cwd", "timeout", "json", "help"]);
 export const CLAUDE_DEFAULT_TIMEOUT = "10m0s";
@@ -17,6 +17,7 @@ export const CLAUDE_SLOW_MODEL_TIMEOUT = "15m0s";
 export const CLAUDE_FABLE_TIMEOUT = "20m0s";
 export const CLAUDE_SETUP_TIMEOUT = "2m0s";
 export const CLAUDE_REVIEW_TOOLS = "Read,Glob,Grep,Bash";
+export const CLAUDE_EDIT_TOOLS = `${CLAUDE_REVIEW_TOOLS},Edit,Write`;
 export const DEFAULT_REVIEW_SCOPE = "all current uncommitted changes in this repository, including staged, unstaged, and untracked files";
 
 export function defaultTimeoutForModel(model) {
@@ -37,12 +38,15 @@ export function buildClaudeArgs(prompt, options = {}) {
     "--disable-slash-commands",
     "--no-chrome",
     "--tools",
-    CLAUDE_REVIEW_TOOLS,
+    options.allowEdits ? CLAUDE_EDIT_TOOLS : CLAUDE_REVIEW_TOOLS,
     "--permission-mode",
     "dontAsk",
     "-p",
     prompt
   ];
+  if (options.allowEdits) {
+    args.push("--allowedTools", "Edit,Write");
+  }
   if (options.model) {
     args.push("--model", options.model);
   }
@@ -67,7 +71,8 @@ function usage() {
     `  --timeout <duration>  Stop setup after ${CLAUDE_SETUP_TIMEOUT}, or a review after ${CLAUDE_DEFAULT_TIMEOUT} (Opus: ${CLAUDE_SLOW_MODEL_TIMEOUT}; Fable: ${CLAUDE_FABLE_TIMEOUT}).`,
     "  --dry-run             Print the generated prompt without calling Claude.",
     "  --json                Print machine-readable wrapper output.",
-    "  --deep                Select claude-opus-5 when explicitly requested."
+    "  --deep                Select claude-opus-5-5 when explicitly requested.",
+    "  --allow-edits         Enable Edit and Write for an explicitly requested rescue fix."
   ].join("\n"));
 }
 
@@ -114,6 +119,9 @@ export function validateCommandOptions(command, options, positionals = []) {
     }
     return;
   }
+  if (options["allow-edits"] && command !== "rescue") {
+    throw new Error("--allow-edits is only valid for rescue.");
+  }
   if (options.deep && options.model) {
     throw new Error("Use either --deep or --model, not both.");
   }
@@ -138,41 +146,24 @@ export function parseDuration(value) {
 }
 
 export function normalizeModel(model, _command, deep) {
-  if (model) {
-    const normalized = String(model).trim().toLowerCase();
-    if (
-      normalized === "sonnet" ||
-      normalized === "sonnet5" ||
-      normalized === "sonnet-5" ||
-      normalized === "sonnet 5"
-    ) {
-      return "claude-sonnet-5";
-    }
-    if (
-      normalized === "opus" ||
-      normalized === "opus5" ||
-      normalized === "opus-5" ||
-      normalized === "opus 5" ||
-      normalized === "claude-opus-5"
-    ) {
-      return "claude-opus-5";
-    }
-    if (
-      normalized === "opus4.8" ||
-      normalized === "opus-4.8" ||
-      normalized === "opus-4-8" ||
-      normalized === "opus 4.8" ||
-      normalized === "opsu4.8" ||
-      normalized === "claude-opus-4-8"
-    ) {
-      return "claude-opus-4-8";
-    }
-    return model;
+  if (!model) {
+    return deep ? "claude-opus-5-5" : "claude-sonnet-5";
   }
-  if (deep) {
-    return "claude-opus-5";
+  const normalized = String(model).trim().toLowerCase();
+  if (normalized === "opus" || normalized === "claude-opus") return "claude-opus-5-5";
+  if (normalized === "fable" || normalized === "claude-fable") return "claude-fable-5-1";
+  if (normalized === "sonnet") return "claude-sonnet-5";
+  if (normalized === "opsu4.8") return "claude-opus-4-8";
+  // Only normalize known, explicitly versioned aliases. Preserve custom model IDs.
+  const match = /^(?:claude-)?(opus|fable|sonnet)[ -]?(\d+(?:[. -]\d+)?)$/.exec(normalized);
+  if (match) {
+    const version = match[2].replace(/[. ]/g, "-");
+    const known = { opus: ["5-5", "5", "5-0", "4-8"], fable: ["5-1", "5", "5-0"], sonnet: ["5"] };
+    if (known[match[1]].includes(version)) {
+      return `claude-${match[1]}-${version === "5-0" ? "5" : version}`;
+    }
   }
-  return "claude-sonnet-5";
+  return model;
 }
 
 function timestamp() {
@@ -279,26 +270,36 @@ function printOutput(payload, asJson) {
   }
 }
 
-function handleSetup(options) {
+export function runSetupCheck(options = {}, dependencies = {}) {
   const cwd = path.resolve(options.cwd ?? process.cwd());
   const timeout = String(options.timeout ?? CLAUDE_SETUP_TIMEOUT).trim();
   const timeoutMs = parseDuration(timeout);
-  const version = run("claude", ["--version"], { cwd });
-  const smoke = run("claude", buildClaudeArgs("Respond with exactly: OK", {
-    model: "claude-sonnet-5"
-  }), { cwd, timeoutMs });
+  const now = dependencies.now ?? Date.now;
+  const execute = dependencies.run ?? run;
+  const deadline = now() + timeoutMs;
+  const version = execute("claude", ["--version"], { cwd, timeoutMs });
+  const remainingMs = deadline - now();
   const versionReport = commandReport(version);
-  const smokeReport = commandReport(smoke);
-  const payload = {
-    ready: version.status === 0 && smoke.status === 0 && outputText(smoke.stdout).trim() === "OK",
+  if (version.status !== 0 || version.error || remainingMs <= 0) {
+    return { ready: false, timeout, version: versionReport, smoke: {
+      skipped: true, reason: remainingMs <= 0 ? "Setup deadline exhausted." : "Version probe failed."
+    } };
+  }
+  const smoke = execute("claude", buildClaudeArgs("Respond with exactly: OK", {
+    model: "claude-sonnet-5"
+  }), { cwd, timeoutMs: remainingMs });
+  return {
+    ready: !smoke.error && smoke.status === 0 && now() <= deadline && outputText(smoke.stdout).trim() === "OK",
     timeout,
     version: versionReport,
-    smoke: smokeReport
+    smoke: commandReport(smoke)
   };
+}
+
+function handleSetup(options) {
+  const payload = runSetupCheck(options);
   printOutput({ ...payload, result: payload.ready ? "Claude Bridge setup check passed." : "Claude Bridge setup check failed." }, Boolean(options.json));
-  if (!payload.ready) {
-    process.exitCode = 1;
-  }
+  if (!payload.ready) process.exitCode = 1;
 }
 
 function handleClaudeCommand(command, options, positionals) {
@@ -318,7 +319,10 @@ function handleClaudeCommand(command, options, positionals) {
     SCOPE: scope,
     USER_FOCUS: userFocus,
     LANGUAGE: language,
-    TIMEOUT: timeout
+    TIMEOUT: timeout,
+    EDIT_POLICY: options["allow-edits"]
+      ? "The user explicitly authorized a constrained fix. Use Edit and Write only within the requested scope. Do not modify files through shell commands."
+      : "Do not edit files. This run is investigation and fix planning only; an explicitly authorized rescue fix requires --allow-edits."
   });
   const promptFile = path.join(outputDir, `${command}.prompt.md`);
   const jsonFile = path.join(outputDir, `${command}.json`);
@@ -342,7 +346,8 @@ function handleClaudeCommand(command, options, positionals) {
 
   const claude = run("claude", buildClaudeArgs(prompt, {
     model,
-    outputFormat: "json"
+    outputFormat: "json",
+    allowEdits: Boolean(options["allow-edits"])
   }), { cwd, timeoutMs });
   fs.writeFileSync(jsonFile, claude.stdout ?? "", "utf8");
   const spawnError = claude.error instanceof Error ? claude.error.message : "";
