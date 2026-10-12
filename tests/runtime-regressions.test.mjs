@@ -13,6 +13,8 @@ const invoke = (provider, ...args) => spawnSync(process.execPath, [
 
 test("bundled Claude aliases select current models and retain explicit pins", () => {
   for (const [alias, expected] of [
+    ["sonnet", "claude-sonnet-5-5"], ["sonnet5.5", "claude-sonnet-5-5"],
+    ["sonnet5", "claude-sonnet-5"],
     ["opus", "claude-opus-5-5"], ["opus5.5", "claude-opus-5-5"],
     ["fable", "claude-fable-5-1"], ["fable 5.1", "claude-fable-5-1"],
     ["opus5", "claude-opus-5"], ["fable5", "claude-fable-5"],
@@ -21,8 +23,8 @@ test("bundled Claude aliases select current models and retain explicit pins", ()
     assert.equal(claude.normalizeModel(alias, "review", false), expected);
   }
   assert.equal(claude.normalizeModel(undefined, "rescue", true), "claude-opus-5-5");
-  assert.equal(claude.defaultTimeoutForModel("claude-opus-5-5"), "15m0s");
-  assert.equal(claude.defaultTimeoutForModel("claude-fable-5-1"), "20m0s");
+  assert.equal(claude.defaultTimeoutForModel("claude-opus-5-5"), "45m0s");
+  assert.equal(claude.defaultTimeoutForModel("claude-fable-5-1"), "60m0s");
 });
 
 test("bundled Antigravity uses current Flash defaults without inventing Claude labels", () => {
@@ -111,8 +113,42 @@ test("bundled rescue prompt reflects explicit edit authorization", () => {
     assert.equal(result.status, 0, result.stderr);
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.model, "claude-fable-5-1");
-    assert.equal(payload.timeout, "20m0s");
+    assert.equal(payload.timeout, "60m0s");
     assert.doesNotMatch(payload.prompt, /\{\{[A-Z_]+\}\}/);
     assert.match(payload.prompt, allowEdits ? /Use Edit and Write only within/ : /Do not edit files\. This run is investigation/);
+  }
+});
+
+test("Claude review timeout defaults and explicit overrides reach rendered prompts", () => {
+  for (const [command, model, defaultTimeout] of [
+    ["review", "sonnet", "15m0s"],
+    ["adversarial-review", "opus", "45m0s"],
+    ["rescue", "fable", "60m0s"],
+  ]) {
+    for (const explicitTimeout of [undefined, "7m30s", "90m0s"]) {
+      const expected = explicitTimeout ?? defaultTimeout;
+      const result = invoke("claude", command, "--dry-run", "--json", "--model", model,
+        ...(explicitTimeout ? ["--timeout", explicitTimeout] : []));
+      assert.equal(result.status, 0, result.stderr);
+      const payload = JSON.parse(result.stdout);
+      assert.equal(payload.timeout, expected);
+      assert.ok(payload.prompt.includes(`selected hard timeout (${expected})`));
+      assert.doesNotMatch(payload.prompt, /\{\{TIMEOUT\}\}/);
+    }
+  }
+});
+
+
+test("Antigravity selected timeout reaches every bundled provider prompt", () => {
+  for (const command of ["review", "adversarial-review", "rescue"]) {
+    for (const timeout of [undefined, "30s", "15m0s"]) {
+      const result = invoke("antigravity", command, "--dry-run", "--json",
+        ...(timeout ? ["--print-timeout", timeout] : []));
+      assert.equal(result.status, 0, result.stderr);
+      const payload = JSON.parse(result.stdout);
+      assert.equal(payload.timeout, timeout ?? "5m0s");
+      assert.ok(payload.prompt.includes(`selected hard timeout (${timeout ?? "5m0s"})`));
+      assert.doesNotMatch(payload.prompt, /\{\{TIMEOUT\}\}|within five minutes/);
+    }
   }
 });

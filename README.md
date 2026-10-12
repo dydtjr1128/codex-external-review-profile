@@ -83,7 +83,7 @@ Do not choose a provider from a generic review or investigation request. The use
 - Program execution: tests, builds, package managers, scripts, servers, applications, CI, deployment, release, and workflow automation require a separate explicit user request; review or investigation alone is not permission.
 - Static inspection: read-only repository commands needed to obtain the requested scope are allowed, including `git diff`, `git status`, `git show`, `git log`, `git blame`, and `git ls-files`; they must not modify repository state.
 
-Give Claude Bridge one attempt bounded to ten minutes (`10m0s`), fifteen minutes (`15m0s`) when the selected model name contains `opus`, or twenty minutes (`20m0s`) when it contains `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). An explicit timeout always overrides the model default. If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
+Give Claude Bridge one attempt bounded to fifteen minutes (`15m0s`), forty-five minutes (`45m0s`) when the selected model name contains `opus`, or sixty minutes (`60m0s`) when it contains `fable`. Give Antigravity Bridge one attempt bounded to five minutes (`5m0s`). An explicit timeout always overrides the model default. If time or evidence is insufficient, return the supported findings and state the remaining gap without retrying, adding a reviewer, expanding scope, or switching to a deeper model.
 
 Keep the pass focused: start with the exact diff or named files, inspect only directly relevant dependencies needed to support a concrete finding, and report uncertainty instead of performing repository-wide discovery, recursively following references, or pursuing speculative context.
 
@@ -124,13 +124,22 @@ Both helpers capture prompts, logs, raw output, and normalized results under the
 
 Claude Bridge runs Claude Code with `--safe-mode` and explicit MCP, slash-command, and Chrome exclusions. It preserves normal authentication while preventing project customizations from inflating review startup or context. By default, built-in tools are limited to `Read`, `Glob`, `Grep`, and `Bash`, and `dontAsk` permission mode makes unavailable operations fail instead of pausing for approval. Organization-managed policy may still apply.
 
-When Opus is explicitly selected, `--model opus`, `opus5.5`, and `--deep` resolve to `claude-opus-5-5`. Explicit `--model fable` or `fable5.1` selects `claude-fable-5-1`. Versioned `opus5`, `fable5`, and `opus4.8` aliases preserve their original models. The default remains Sonnet 5; Fable requires explicit selection. Model IDs follow the [Anthropic reference](https://platform.claude.com/docs/en/models/overview).
+When Opus is explicitly selected, `--model opus`, `opus5.5`, and `--deep` resolve to `claude-opus-5-5`. Explicit `--model fable` or `fable5.1` selects `claude-fable-5-1`. Versioned `opus5`, `fable5`, and `opus4.8` aliases preserve their original models. The default and unversioned `sonnet` alias now use Sonnet 5.5 (`claude-sonnet-5-5`); explicit `sonnet5` and `claude-sonnet-5` stay pinned to Sonnet 5; Fable requires explicit selection. Model IDs follow the [Anthropic reference](https://platform.claude.com/docs/en/models/overview).
 
 For an explicitly requested Claude rescue fix, use `rescue --allow-edits`. This enables and permits the built-in Edit and Write tools; ordinary rescue calls remain investigation-only, and review commands reject the flag. Shell writes and executable validation are not authorized by this flag.
 
 Both setup commands share one deadline across version and smoke probes and skip smoke after a failed version probe or exhausted budget. Claude defaults to two minutes (`--timeout`), Antigravity to one minute (`--print-timeout`). Unknown, conflicting, and unsupported command options fail before provider execution.
 
-Antigravity accepts only stdout from the current invocation. Empty output is a failed result even with exit code 0; unrelated or stale transcripts are never reused. Its Flash defaults now use Gemini 3.8 from the `agy models` catalog observed on 2026-09-23. Explicit Gemini 3.5 aliases remain pinned; Antigravity's Claude labels follow its own catalog, not Claude Bridge's API IDs.
+Antigravity accepts only stdout from the current invocation. Empty output is a failed result even with exit code 0; unrelated or stale transcripts are never reused. Its Flash defaults now use Gemini 3.8 from the `agy models` catalog rechecked on 2026-10-12. Explicit Gemini 3.5 aliases remain pinned; Antigravity's Claude labels follow its own catalog, not Claude Bridge's API IDs.
+
+To extend one run beyond its default budget, pass a duration explicitly:
+
+```powershell
+node .\scripts\claude-bridge.mjs review --model sonnet --timeout 90m0s
+node .\scripts\antigravity-bridge.mjs review --print-timeout 15m0s
+```
+
+Claude defaults are 15 minutes for standard models, 45 minutes for Opus, and 60 minutes for Fable. Antigravity defaults to five minutes. Explicit durations may be shorter or longer and replace the default in both the process hard limit and provider prompt. Supported units are `m`, `s`, `ms`, or combinations such as `7m30s`. The override applies to one attempt.
 
 ## Review Handling
 
