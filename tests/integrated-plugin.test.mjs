@@ -87,11 +87,11 @@ test("Claude review timeouts scale for slower models without changing Antigravit
   const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
   const bridge = await import(`${pathToFileURL(bridgePath).href}?timeout-policy`);
 
-  assert.equal(bridge.CLAUDE_DEFAULT_TIMEOUT, "10m0s");
-  assert.equal(bridge.defaultTimeoutForModel("claude-sonnet-5"), "10m0s");
-  assert.equal(bridge.defaultTimeoutForModel("claude-opus-5"), "15m0s");
-  assert.equal(bridge.defaultTimeoutForModel("claude-opus-4-8"), "15m0s");
-  assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "20m0s");
+  assert.equal(bridge.CLAUDE_DEFAULT_TIMEOUT, "15m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-sonnet-5-5"), "15m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-opus-5"), "45m0s");
+  assert.equal(bridge.defaultTimeoutForModel("claude-opus-4-8"), "45m0s");
+  assert.equal(bridge.defaultTimeoutForModel("team-fable-reviewer"), "60m0s");
 
   for (const relativePath of [
     "skills/claude-review/SKILL.md",
@@ -102,7 +102,7 @@ test("Claude review timeouts scale for slower models without changing Antigravit
     "prompts/claude/rescue.md",
   ]) {
     const content = readFileSync(path.join(root, relativePath), "utf8");
-    assert.match(content, /ten minutes|10m0s|\{\{TIMEOUT\}\}/i, relativePath);
+    assert.match(content, /fifteen minutes|15m0s|\{\{TIMEOUT\}\}/i, relativePath);
     assert.doesNotMatch(content, /within five minutes|default is `5m0s`|`5m0s` default/i, relativePath);
   }
 
@@ -126,12 +126,12 @@ test("Claude helper preserves Opus 5 pins and maps deep mode to Opus 5.5", async
   }
 });
 
-test("Claude review commands default to Sonnet 5 without explicit deep mode", async () => {
+test("Claude review commands default to Sonnet 5.5 without explicit deep mode", async () => {
   const bridgePath = path.join(root, "scripts", "claude-bridge.mjs");
   const bridge = await import(`${pathToFileURL(bridgePath).href}?default-model-policy`);
 
-  assert.equal(bridge.normalizeModel(undefined, "review", false), "claude-sonnet-5");
-  assert.equal(bridge.normalizeModel(undefined, "adversarial-review", false), "claude-sonnet-5");
+  assert.equal(bridge.normalizeModel(undefined, "review", false), "claude-sonnet-5-5");
+  assert.equal(bridge.normalizeModel(undefined, "adversarial-review", false), "claude-sonnet-5-5");
 });
 
 test("Claude runs reviews with isolated read-only-oriented parameters", async () => {
@@ -141,7 +141,7 @@ test("Claude runs reviews with isolated read-only-oriented parameters", async ()
   assert.equal(bridge.CLAUDE_SETUP_TIMEOUT, "2m0s");
   assert.equal(bridge.CLAUDE_REVIEW_TOOLS, "Read,Glob,Grep,Bash");
   assert.deepEqual(bridge.buildClaudeArgs("review this diff", {
-    model: "claude-sonnet-5",
+    model: "claude-sonnet-5-5",
     outputFormat: "json",
   }), [
     "--safe-mode",
@@ -155,7 +155,7 @@ test("Claude runs reviews with isolated read-only-oriented parameters", async ()
     "-p",
     "review this diff",
     "--model",
-    "claude-sonnet-5",
+    "claude-sonnet-5-5",
     "--output-format",
     "json",
     "--no-session-persistence",

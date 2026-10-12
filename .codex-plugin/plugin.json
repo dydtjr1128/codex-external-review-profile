@@ -9,14 +9,14 @@
   "interface": {
     "displayName": "External Review Profiles",
     "shortDescription": "Use Claude and Antigravity review skills.",
-    "longDescription": "External Review Profiles integrates provider-qualified Claude Bridge and Antigravity Bridge skills in one plugin while pinning both provider source repositories. Select every provider explicitly. Claude Bridge gets one review attempt bounded to ten minutes (10m0s), fifteen minutes (15m0s) for Opus, or twenty minutes (20m0s) for Fable, while Antigravity Bridge remains bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
+    "longDescription": "External Review Profiles integrates provider-qualified Claude Bridge and Antigravity Bridge skills in one plugin while pinning both provider source repositories. Select every provider explicitly. Claude Bridge gets one review attempt bounded to fifteen minutes (15m0s), forty-five minutes (45m0s) for Opus, or sixty minutes (60m0s) for Fable, while Antigravity Bridge remains bounded to five minutes (5m0s); deep mode, retries, extra passes, and additional reviewers require explicit opt-in. Program execution requires a separate explicit user request.",
     "developerName": "dydtjr1128",
     "category": "Productivity",
     "capabilities": [
       "Review"
     ],
     "defaultPrompt": [
-      "Use Claude Bridge for one review attempt of my local changes, bounded to 10m0s, without executing programs.",
+      "Use Claude Bridge for one review attempt of my local changes, within the helper-selected timeout, without executing programs.",
       "Use Antigravity Bridge for one review attempt of my local changes, bounded to 5m0s, without executing programs."
     ]
   }
